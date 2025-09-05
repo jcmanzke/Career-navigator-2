@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 // --- Minimal helpers -------------------------------------------------------
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -278,6 +278,7 @@ function asMarkdown(j) {
 function Shell({ step, setStep, saveState, children }) {
   const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
+    const supabase = getSupabaseClient();
     supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null));
   }, []);
   const stepToPhase = (s) => (s <= 4 ? "Phase 1" : s <= 6 ? "Phase 2" : "Phase 3");
@@ -700,6 +701,7 @@ export default function CareerNavigator() {
   });
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
     supabase.from('journeys').select('id').limit(1)
       .then(({ error }) => {
         if (error) {
