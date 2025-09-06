@@ -4,25 +4,45 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import CareerNavigatorLoader from "./CareerNavigatorLoader";
 import AuthForm from "./AuthForm";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 export default function Page() {
   const [session, setSession] = useState<Session | null>(null);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let unsubscribe = () => {};
+    try {
+      const supabase = getSupabaseClient();
+      supabase.auth.getSession().then(({ data }) => {
+        setSession(data.session);
+        setLoading(false);
+      });
+      const { data: listener } = supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          setSession(session);
+        }
+      );
+      unsubscribe = () => listener.subscription.unsubscribe();
+    } catch (e) {
+      console.error(e);
+      setError((e as Error).message);
       setLoading(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    return () => listener.subscription.unsubscribe();
+    }
+    return unsubscribe;
   }, []);
 
   if (loading) return null;
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
