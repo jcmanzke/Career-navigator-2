@@ -21,11 +21,18 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     }
     try {
       const supabase = getSupabaseClient();
-      const authFn =
+      const normalizedEmail = email.trim().toLowerCase();
+      const supabasePassword = pin.padEnd(6, "0");
+      const { error } =
         mode === "signup"
-          ? supabase.auth.signUp
-          : supabase.auth.signInWithPassword;
-      const { error } = await authFn({ email, password: pin });
+          ? await supabase.auth.signUp({
+              email: normalizedEmail,
+              password: supabasePassword,
+            })
+          : await supabase.auth.signInWithPassword({
+              email: normalizedEmail,
+              password: supabasePassword,
+            });
       if (error) {
         setError(error.message);
       } else {
@@ -37,14 +44,14 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-xs">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-xs">
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
-        className="border p-2"
+        className="h-12 px-4 rounded-2xl border border-accent-700"
       />
       <input
         type="password"
@@ -55,10 +62,10 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         maxLength={4}
         inputMode="numeric"
         title="PIN must be exactly 4 digits"
-        className="border p-2"
+        className="h-12 px-4 rounded-2xl border border-accent-700"
       />
-      {error && <p className="text-red-600 text-sm">{error}</p>}
-      <button type="submit" className="bg-blue-600 text-white p-2">
+      {error && <p className="text-semantic-error-base text-small">{error}</p>}
+      <button type="submit" className="bg-primary-500 text-neutrals-0 h-12 px-4 rounded-3xl font-semibold uppercase">
         {mode === "signup" ? "Sign Up" : "Log In"}
       </button>
     </form>
