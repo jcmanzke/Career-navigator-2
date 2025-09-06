@@ -5,3 +5,11 @@
 html, body, :root {
   height: 100%;
 }
+
+body {
+  @apply bg-neutrals-0 text-neutrals-700 font-body;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-display text-neutrals-900;
+}
