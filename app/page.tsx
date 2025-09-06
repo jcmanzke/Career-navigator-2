@@ -39,7 +39,7 @@ export default function Page() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-red-600">{error}</p>
+        <p className="text-semantic-error-base">{error}</p>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export default function Page() {
           <AuthForm mode={authMode} />
           <button
             onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
-            className="text-sm text-blue-600 underline"
+            className="text-small text-primary-500 underline"
           >
             {authMode === "login" ? "Need an account? Sign up" : "Have an account? Log in"}
           </button>
