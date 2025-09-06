@@ -388,6 +388,31 @@ function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
       return { ...j, stories: next };
     });
   const canNext = top.length > 0;
+
+  const handleNext = async () => {
+    if (!journey.id) return onNext();
+    try {
+      setSaveState('saving');
+      const supabase = getSupabaseClient();
+      const rows = top.map((e) => ({
+        journey_id: journey.id,
+        experience_id: e.id,
+        context: stories[e.id]?.context || '',
+        impact: stories[e.id]?.impact || '',
+      }));
+      if (rows.length > 0) {
+        const { error } = await supabase
+          .from('stories')
+          .upsert(rows, { onConflict: 'journey_id,experience_id' });
+        if (error) throw error;
+      }
+      setSaveState('idle');
+    } catch (e) {
+      console.error(e);
+      setSaveState('idle');
+    }
+    onNext();
+  };
   return (
     <div className="space-y-4">
       <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
@@ -416,7 +441,7 @@ function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
       </section>
       <div className="flex justify-between">
         <button onClick={onBack} className="px-3 py-2 rounded-xl border">Zurück</button>
-        <button onClick={onNext} disabled={!canNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 4</button>
+        <button onClick={handleNext} disabled={!canNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 4</button>
       </div>
     </div>
   );
