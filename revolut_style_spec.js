@@ -16,57 +16,38 @@ const revolutTheme = {
    */
   colors: {
     primary: {
-      50:  '#c5dbec', // very light blue
-      100: '#9fc3e0',
-      200: '#78aad3',
-      300: '#5292c7',
-      400: '#3879ad',
-      500: '#2c5e87', // default primary tint for backgrounds and large buttons
-      600: '#1f4360',
-      700: '#13283a',
-      800: '#060d13',
-      900: '#000000'
+      500: '#FFD84D',
+      600: '#E6C13F'
     },
     neutrals: {
-      0:   '#ffffff', // pure white
-      50:  '#ebebf0',
-      100: '#ceceda',
-      200: '#b1b1c4',
-      300: '#9393ae',
-      400: '#767698',
-      500: '#5e5e7d',
-      600: '#464f58',
-      700: '#30363b',
-      800: '#191c1f',
-      900: '#020303' // almost black used for deepest backgrounds
+      0: '#F9F9F9', // off-white card/background
+      50: '#FFFFFF',
+      200: '#E6E6E6',
+      400: '#CCCCCC',
+      500: '#7A7A7A',
+      600: '#5C5C5C',
+      700: '#3E3E3E',
+      900: '#2C2C2C'
     },
     accent: {
-      50:  '#ffffff',
-      100: '#ffffff',
-      200: '#ffffff',
-      300: '#ffffff',
-      400: '#ffffff',
-      500: '#ffffff',
-      600: '#e6e6e6',
-      700: '#cccccc',
-      800: '#b3b3b3',
-      900: '#999999'
+      700: '#E6E6E6',
+      900: '#7A7A7A'
     },
     semantic: {
       success: {
-        light: '#a8e5ac',
-        base:  '#22bb33', // vivid green used for positive outcomes and success messages
-        dark:  '#178d24'
+        light: '#C8E6C9',
+        base: '#4CAF50',
+        dark: '#388E3C'
       },
       warning: {
-        light: '#f8d29b',
-        base:  '#f0ad4e', // warm amber used for warnings and attention states
-        dark:  '#b97c27'
+        light: '#FFE082',
+        base: '#FFD54F',
+        dark: '#FFA000'
       },
       error: {
-        light: '#f2a9ac',
-        base:  '#bb2124', // deep red used for destructive actions and error messages
-        dark:  '#7e0e0f'
+        light: '#EF9A9A',
+        base: '#E53935',
+        dark: '#B71C1C'
       }
     }
   },
