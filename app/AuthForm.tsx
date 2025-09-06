@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 type AuthMode = "login" | "signup";
 
@@ -19,12 +19,19 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       setError("PIN must be exactly 4 digits");
       return;
     }
-    const authFn = mode === "signup" ? supabase.auth.signUp : supabase.auth.signInWithPassword;
-    const { error } = await authFn({ email, password: pin });
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push("/");
+    try {
+      const supabase = getSupabaseClient();
+      const { error } =
+        mode === "signup"
+          ? await supabase.auth.signUp({ email, password: pin })
+          : await supabase.auth.signInWithPassword({ email, password: pin });
+      if (error) {
+        setError(error.message);
+      } else {
+        router.push("/");
+      }
+    } catch (e) {
+      setError((e as Error).message);
     }
   };
 

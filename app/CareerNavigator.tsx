@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 // --- Minimal helpers -------------------------------------------------------
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -278,7 +278,14 @@ function asMarkdown(j) {
 function Shell({ step, setStep, saveState, children }) {
   const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null));
+    try {
+      const supabase = getSupabaseClient();
+      supabase.auth
+        .getUser()
+        .then(({ data: { user } }) => setEmail(user?.email ?? null));
+    } catch (e) {
+      console.error(e);
+    }
   }, []);
   const stepToPhase = (s) => (s <= 4 ? "Phase 1" : s <= 6 ? "Phase 2" : "Phase 3");
   return (
@@ -700,14 +707,22 @@ export default function CareerNavigator() {
   });
 
   useEffect(() => {
-    supabase.from('journeys').select('id').limit(1)
-      .then(({ error }) => {
-        if (error) {
-          console.error('Supabase connection error', error);
-        } else {
-          console.log('Connected to Supabase');
-        }
-      });
+    try {
+      const supabase = getSupabaseClient();
+      supabase
+        .from('journeys')
+        .select('id')
+        .limit(1)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Supabase connection error', error);
+          } else {
+            console.log('Connected to Supabase');
+          }
+        });
+    } catch (e) {
+      console.error(e);
+    }
   }, []);
 
   // Autosave to localStorage
