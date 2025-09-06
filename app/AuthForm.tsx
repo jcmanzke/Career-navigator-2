@@ -21,6 +21,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     }
     try {
       const supabase = getSupabaseClient();
+codex/fix-deployment-errors-on-vercel-r6kehn
       const password = pin.padEnd(6, "0");
       if (mode === "signup") {
         const { error: signUpError } = await supabase.auth.signUp({
