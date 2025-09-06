@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 // --- Minimal helpers -------------------------------------------------------
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -277,8 +277,23 @@ function asMarkdown(j) {
 // --- Shell -----------------------------------------------------------------
 function Shell({ step, setStep, saveState, children }) {
   const [email, setEmail] = useState<string | null>(null);
+  const handleLogout = async () => {
+    try {
+      const supabase = getSupabaseClient();
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error(e);
+    }
+  };
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null));
+    try {
+      const supabase = getSupabaseClient();
+      supabase.auth
+        .getUser()
+        .then(({ data: { user } }) => setEmail(user?.email ?? null));
+    } catch (e) {
+      console.error(e);
+    }
   }, []);
   const stepToPhase = (s) => (s <= 4 ? "Phase 1" : s <= 6 ? "Phase 2" : "Phase 3");
   return (
@@ -293,7 +308,17 @@ function Shell({ step, setStep, saveState, children }) {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {email && <span className="text-sm text-gray-600">{email}</span>}
+            {email && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">{email}</span>
+                <button
+                  onClick={handleLogout}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
             <SaveIndicator state={saveState} />
           </div>
         </div>
@@ -301,13 +326,13 @@ function Shell({ step, setStep, saveState, children }) {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <ProgressSteps current={Math.max(1, step || 1)} />
         {children}
-        <footer className="py-4 text-xs text-gray-500 text-center">MVP Demo • Local only • Mocked n8n</footer>
       </main>
     </div>
   );
 }
 
 // --- Phase 1 (Steps 1–4) ---------------------------------------------------
+const MAX_EXPERIENCES = 15;
 const DEFAULT_SKILLS = ["Analyse", "Leadership", "Teamwork", "Creativity", "Customer", "Research", "Delivery", "Communication"];
 const CONTEXT_CHIPS = ["Hamburg", "International", "Remote", "Erneuerbare", "AI", "Strategie", "Produkt", "Beratung", "Corporate", "SME"];
 
@@ -324,6 +349,7 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
   const canFinishPhase = (journey.top7Ids || []).length === Math.min(7, exps.length) && exps.length >= 7;
 
   const addExperience = () => {
+    if (exps.length >= MAX_EXPERIENCES) return toasts.push(`Max. ${MAX_EXPERIENCES} Experiences erreicht`);
     if (!newExpTitle.trim()) return toasts.push("Titel hinzufügen");
     const e = { id: uid(), title: newExpTitle.trim(), details: newExpDetails.trim(), tags: newExpTags };
     setJourney((j) => ({ ...j, experiences: [...(j.experiences || []), e], ranking: [...(j.ranking || []), e.id] }));
@@ -348,7 +374,7 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
         <div className={cls("md:col-span-2", "space-y-6")}>
           {sub === 1 && (
             <section className="bg-white rounded-2xl shadow-sm border p-4">
-              <h2 className="text-lg font-semibold mb-2">Schritt 1: Experiences sammeln (bis zu 20)</h2>
+              <h2 className="text-lg font-semibold mb-2">Schritt 1: Experiences sammeln (bis zu {MAX_EXPERIENCES})</h2>
               <p className="text-sm text-gray-600 mb-4">Kurze Titel, optional Details & Tags. Mindestens 5 zum Fortfahren.</p>
               <div className="grid md:grid-cols-2 gap-3">
                 <input className="border rounded-xl px-3 py-2" placeholder="Titel (z. B. Projekt X gelauncht)" value={newExpTitle} onChange={(e) => setNewExpTitle(e.target.value)} />
@@ -359,7 +385,7 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
               </div>
               <div className="flex items-center gap-2 mt-3">
                 <button onClick={addExperience} className="px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">Experience hinzufügen</button>
-                <span className="text-xs text-gray-500">{exps.length}/20</span>
+                <span className="text-xs text-gray-500">{exps.length}/{MAX_EXPERIENCES}</span>
               </div>
             </section>
           )}
@@ -700,14 +726,22 @@ export default function CareerNavigator() {
   });
 
   useEffect(() => {
-    supabase.from('journeys').select('id').limit(1)
-      .then(({ error }) => {
-        if (error) {
-          console.error('Supabase connection error', error);
-        } else {
-          console.log('Connected to Supabase');
-        }
-      });
+    try {
+      const supabase = getSupabaseClient();
+      supabase
+        .from('journeys')
+        .select('id')
+        .limit(1)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Supabase connection error', error);
+          } else {
+            console.log('Connected to Supabase');
+          }
+        });
+    } catch (e) {
+      console.error(e);
+    }
   }, []);
 
   // Autosave to localStorage
@@ -746,7 +780,7 @@ export default function CareerNavigator() {
           <h1 className="text-2xl font-semibold mb-2">Willkommen zum Career Navigator (MVP)</h1>
           <p className="text-gray-600 mb-4">Geführter 8‑Schritte‑Prozess nach „Seven Stories“. Alles lokal, ohne Login. Du kannst jederzeit zurückkehren – Autosave ist aktiv.</p>
           <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-1 mb-4">
-            <li>20 Experiences sammeln, taggen & clustern</li>
+            <li>{MAX_EXPERIENCES} Experiences sammeln, taggen & clustern</li>
             <li>Top‑7 ranken</li>
             <li>7 Detail‑Stories schreiben</li>
             <li>AI‑Analyse (Themes, Core Values, Implikationen)</li>
