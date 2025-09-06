@@ -29,7 +29,7 @@ function Toasts({ toasts }) {
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">
       {toasts.map((t) => (
-        <div key={t.id} className="rounded-xl shadow-lg bg-gray-900 text-white px-4 py-3 text-sm">
+        <div key={t.id} className="rounded-xl shadow-elevation3 bg-neutrals-900 text-neutrals-0 px-4 py-3 text-small">
           {t.text}
         </div>
       ))}
@@ -40,13 +40,13 @@ function Toasts({ toasts }) {
 // --- Save Indicator ---------------------------------------------------------
 function SaveIndicator({ state }) {
   const map = {
-    idle: { dot: "bg-gray-300", text: "Up to date" },
-    saving: { dot: "bg-amber-400 animate-pulse", text: "Saving…" },
-    saved: { dot: "bg-emerald-500", text: "Saved" },
+    idle: { dot: "bg-neutrals-300", text: "Up to date" },
+    saving: { dot: "bg-semantic-warning-base animate-pulse", text: "Saving…" },
+    saved: { dot: "bg-semantic-success-base", text: "Saved" },
   };
   const m = map[state] || map.idle;
   return (
-    <div className="flex items-center gap-2 text-xs text-gray-500">
+    <div className="flex items-center gap-2 text-small text-neutrals-500">
       <span className={cls("inline-block h-2.5 w-2.5 rounded-full", m.dot)} />
       <span>{m.text}</span>
     </div>
@@ -64,21 +64,25 @@ function ProgressSteps({ current }) {
           <div key={n} className="flex items-center">
             <div
               className={cls(
-                "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium",
-                n < current ? "bg-emerald-600 text-white" : n === current ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-600"
+                "h-8 w-8 rounded-full flex items-center justify-center text-small font-medium",
+                n < current
+                  ? "bg-semantic-success-base text-neutrals-0"
+                  : n === current
+                  ? "bg-primary-500 text-neutrals-0"
+                  : "bg-neutrals-200 text-neutrals-600"
               )}
               title={`Schritt ${n}`}
             >
               {n}
             </div>
-            {n !== 8 && <div className="w-6 h-1 mx-2 rounded bg-gray-200" />}
+            {n !== 8 && <div className="w-6 h-1 mx-2 rounded bg-neutrals-200" />}
           </div>
         ))}
       </div>
-      <div className="h-2 bg-gray-200 rounded-full">
-        <div className="h-2 bg-indigo-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      <div className="h-2 bg-neutrals-200 rounded-full">
+        <div className="h-2 bg-primary-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <p className="text-center text-xs text-gray-500 mt-1">Fortschritt: {pct}%</p>
+      <p className="text-center text-small text-neutrals-500 mt-1">Fortschritt: {pct}%</p>
     </div>
   );
 }
@@ -97,14 +101,14 @@ function TagInput({ value = [], onChange, placeholder = "Tag eingeben und Enter"
     <div>
       <div className="flex flex-wrap gap-2 mb-2">
         {(value || []).map((t) => (
-          <span key={t} className="px-2 py-1 text-xs rounded-full bg-gray-100 border border-gray-200 flex items-center gap-1">
+          <span key={t} className="px-2 py-1 text-small rounded-full bg-neutrals-50 border border-accent-700 flex items-center gap-1">
             {t}
-            <button onClick={() => onChange(value.filter((x) => x !== t))} className="text-gray-400 hover:text-gray-700">×</button>
+            <button onClick={() => onChange(value.filter((x) => x !== t))} className="text-neutrals-400 hover:text-neutrals-700">×</button>
           </span>
         ))}
       </div>
       <input
-        className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="w-full h-12 px-4 rounded-2xl border border-accent-700 text-body focus:outline-none focus:ring-2 focus:ring-primary-500"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
@@ -123,7 +127,7 @@ function TagInput({ value = [], onChange, placeholder = "Tag eingeben und Enter"
 function DraggableList({ items, setItems, render, itemKey }) {
   const dragIndex = useRef(null);
   return (
-    <ul className="divide-y rounded-xl border bg-white">
+    <ul className="divide-y divide-accent-700 rounded-xl border border-accent-700 bg-neutrals-0">
       {items.map((it, i) => (
         <li
           key={itemKey(it)}
@@ -141,9 +145,9 @@ function DraggableList({ items, setItems, render, itemKey }) {
             setItems(next);
             dragIndex.current = null;
           }}
-          className="p-3 flex items-center gap-3 hover:bg-gray-50"
+          className="p-3 flex items-center gap-3 hover:bg-neutrals-50"
         >
-          <span className="cursor-move text-gray-400">↕</span>
+          <span className="cursor-move text-neutrals-400">↕</span>
           {render(it, i)}
         </li>
       ))}
@@ -289,18 +293,18 @@ function Shell({ step, setStep, saveState, children }) {
   }, []);
   const stepToPhase = (s) => (s <= 4 ? "Phase 1" : s <= 6 ? "Phase 2" : "Phase 3");
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 text-gray-900">
-      <header className="sticky top-0 z-40 backdrop-blur bg-white/70 border-b">
+    <div className="min-h-screen bg-gradient-to-b from-neutrals-0 to-neutrals-50 text-neutrals-900">
+      <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold">CN</div>
+            <div className="h-8 w-8 rounded-2xl bg-primary-500 text-neutrals-0 flex items-center justify-center font-bold">CN</div>
             <div>
-              <div className="font-semibold">Career Navigator – MVP</div>
-              <div className="text-xs text-gray-500">{step === 0 ? "Onboarding" : `Schritt ${step} • ${stepToPhase(step)}`}</div>
+              <div className="font-display text-h6">Career Navigator – MVP</div>
+              <div className="text-small text-neutrals-500">{step === 0 ? "Onboarding" : `Schritt ${step} • ${stepToPhase(step)}`}</div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {email && <span className="text-sm text-gray-600">{email}</span>}
+            {email && <span className="text-small text-neutrals-600">{email}</span>}
             <SaveIndicator state={saveState} />
           </div>
         </div>
@@ -308,7 +312,7 @@ function Shell({ step, setStep, saveState, children }) {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <ProgressSteps current={Math.max(1, step || 1)} />
         {children}
-        <footer className="py-4 text-xs text-gray-500 text-center">MVP Demo • Local only • Mocked n8n</footer>
+        <footer className="py-4 text-small text-neutrals-500 text-center">MVP Demo • Local only • Mocked n8n</footer>
       </main>
     </div>
   );
@@ -354,32 +358,32 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
       <div className="grid md:grid-cols-3 gap-4">
         <div className={cls("md:col-span-2", "space-y-6")}>
           {sub === 1 && (
-            <section className="bg-white rounded-2xl shadow-sm border p-4">
+            <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
               <h2 className="text-lg font-semibold mb-2">Schritt 1: Experiences sammeln (bis zu 20)</h2>
-              <p className="text-sm text-gray-600 mb-4">Kurze Titel, optional Details & Tags. Mindestens 5 zum Fortfahren.</p>
+            <p className="text-body text-neutrals-600 mb-4">Kurze Titel, optional Details & Tags. Mindestens 5 zum Fortfahren.</p>
               <div className="grid md:grid-cols-2 gap-3">
-                <input className="border rounded-xl px-3 py-2" placeholder="Titel (z. B. Projekt X gelauncht)" value={newExpTitle} onChange={(e) => setNewExpTitle(e.target.value)} />
-                <input className="border rounded-xl px-3 py-2" placeholder="Details (optional)" value={newExpDetails} onChange={(e) => setNewExpDetails(e.target.value)} />
+                <input className="h-12 px-4 rounded-2xl border border-accent-700" placeholder="Titel (z. B. Projekt X gelauncht)" value={newExpTitle} onChange={(e) => setNewExpTitle(e.target.value)} />
+                <input className="h-12 px-4 rounded-2xl border border-accent-700" placeholder="Details (optional)" value={newExpDetails} onChange={(e) => setNewExpDetails(e.target.value)} />
                 <div className="md:col-span-2">
                   <TagInput value={newExpTags} onChange={setNewExpTags} />
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-3">
-                <button onClick={addExperience} className="px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">Experience hinzufügen</button>
-                <span className="text-xs text-gray-500">{exps.length}/20</span>
+                <button onClick={addExperience} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 hover:bg-primary-600">Experience hinzufügen</button>
+              <span className="text-small text-neutrals-500">{exps.length}/20</span>
               </div>
             </section>
           )}
 
           {sub === 2 && (
-            <section className="bg-white rounded-2xl shadow-sm border p-4">
+            <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
               <h2 className="text-lg font-semibold mb-2">Schritt 2: Tagging & Clustering vorbereiten</h2>
-              <p className="text-sm text-gray-600 mb-2">Füge jeder Experience mind. einen Tag hinzu. Clustering erfolgt im nächsten Schritt automatisch.</p>
+              <p className="text-body text-neutrals-600 mb-2">Füge jeder Experience mind. einen Tag hinzu. Clustering erfolgt im nächsten Schritt automatisch.</p>
               <ul className="space-y-3">
                 {exps.map((e) => (
-                  <li key={e.id} className="border rounded-xl p-3">
+                  <li key={e.id} className="border border-accent-700 rounded-xl p-3">
                     <div className="font-medium">{e.title}</div>
-                    <div className="text-xs text-gray-500 mb-2">{e.details || "—"}</div>
+                    <div className="text-small text-neutrals-500 mb-2">{e.details || "—"}</div>
                     <TagInput value={e.tags || []} onChange={(tags) => setJourney((j) => ({ ...j, experiences: j.experiences.map((x) => (x.id === e.id ? { ...x, tags } : x)) }))} />
                   </li>
                 ))}
@@ -388,14 +392,14 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
           )}
 
           {sub === 3 && (
-            <section className="bg-white rounded-2xl shadow-sm border p-4">
+            <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
               <h2 className="text-lg font-semibold mb-2">Schritt 3: Cluster prüfen</h2>
-              <p className="text-sm text-gray-600 mb-2">Automatisch gruppiert nach erstem Tag. Du kannst Cluster umbenennen.</p>
+            <p className="text-body text-neutrals-600 mb-2">Automatisch gruppiert nach erstem Tag. Du kannst Cluster umbenennen.</p>
               <div className="grid md:grid-cols-2 gap-3">
                 {(journey.clusters || []).map((c) => (
-                  <div key={c.id} className="border rounded-xl p-3">
+                  <div key={c.id} className="border border-accent-700 rounded-xl p-3">
                     <input
-                      className="font-semibold w-full mb-2 border rounded-lg px-2 py-1"
+                      className="font-semibold w-full mb-2 border border-accent-700 rounded-lg px-2 py-1"
                       value={c.name}
                       onChange={(e) =>
                         setJourney((j) => ({
@@ -404,7 +408,7 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
                         }))
                       }
                     />
-                    <ul className="text-sm text-gray-700 list-disc pl-5">
+                    <ul className="text-body text-neutrals-700 list-disc pl-5">
                       {c.experienceIds.map((id) => {
                         const e = exps.find((x) => x.id === id);
                         return <li key={id}>{e?.title}</li>;
@@ -417,9 +421,9 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
           )}
 
           {sub === 4 && (
-            <section className="bg-white rounded-2xl shadow-sm border p-4">
+            <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
               <h2 className="text-lg font-semibold mb-2">Schritt 4: Ranking & Top‑7 auswählen</h2>
-              <p className="text-sm text-gray-600 mb-2">Per Drag & Drop sortieren. Die ersten 7 gelten als Top‑7.</p>
+            <p className="text-body text-neutrals-600 mb-2">Per Drag & Drop sortieren. Die ersten 7 gelten als Top‑7.</p>
               <DraggableList
                 items={rankingList}
                 setItems={(list) =>
@@ -433,9 +437,14 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
                   <div className="flex-1 flex items-center justify-between">
                     <div>
                       <div className="font-medium">{i + 1}. {e.title}</div>
-                      <div className="text-xs text-gray-500">Tags: {(e.tags || []).join(", ") || "—"}</div>
+                    <div className="text-small text-neutrals-500">Tags: {(e.tags || []).join(", ") || "—"}</div>
                     </div>
-                    <span className={cls("text-xs px-2 py-1 rounded-full border", i < 7 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-50 text-gray-600 border-gray-200")}>{i < 7 ? "Top‑7" : "—"}</span>
+                    <span className={cls(
+                      "text-small px-2 py-1 rounded-full border",
+                      i < 7
+                        ? "bg-semantic-success-light text-semantic-success-dark border-semantic-success-base"
+                        : "bg-neutrals-50 text-neutrals-600 border-accent-700"
+                    )}>{i < 7 ? "Top‑7" : "—"}</span>
                   </div>
                 )}
                 itemKey={(e) => e.id}
@@ -446,22 +455,27 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
 
         {/* Sidebar */}
         <aside className="space-y-4">
-          <section className="bg-white rounded-2xl shadow-sm border p-4">
-            <h3 className="font-semibold mb-2">Checkliste Phase 1</h3>
-            <ul className="text-sm space-y-1">
+          <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
+            <h3 className="font-display text-h6 mb-2">Checkliste Phase 1</h3>
+            <ul className="text-body space-y-1">
               <li>✓ Mind. 5 Experiences: <b>{exps.length}</b></li>
               <li>{canNextFrom2 ? "✓" : "○"} Alle Experiences getaggt</li>
               <li>{canNextFrom3 ? "✓" : "○"} Cluster erzeugt</li>
               <li>{canFinishPhase ? "✓" : "○"} Top‑7 ausgewählt</li>
             </ul>
           </section>
-          <section className="bg-white rounded-2xl shadow-sm border p-4 space-y-2">
+          <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               {[1, 2, 3, 4].map((i) => (
                 <button
                   key={i}
                   onClick={() => setSub(i)}
-                  className={cls("px-3 py-1.5 rounded-xl text-sm border", sub === i ? "bg-indigo-600 text-white border-indigo-600" : "bg-white hover:bg-gray-50")}
+                  className={cls(
+                    "px-3 py-1.5 rounded-xl text-small border",
+                    sub === i
+                      ? "bg-primary-500 text-neutrals-0 border-primary-500"
+                      : "bg-neutrals-0 hover:bg-neutrals-50"
+                  )}
                 >
                   Schritt {i}
                 </button>
@@ -472,12 +486,18 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
                 <button
                   disabled={(sub === 1 && !canNextFrom1) || (sub === 2 && !canNextFrom2) || (sub === 3 && !canNextFrom3)}
                   onClick={() => setSub((s) => Math.min(4, s + 1))}
-                  className="w-full px-3 py-2 rounded-xl bg-indigo-600 text-white disabled:opacity-40"
+                  className="w-full px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40"
                 >
                   Weiter
                 </button>
               ) : (
-                <button disabled={!canFinishPhase} onClick={nextStep} className="w-full px-3 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-40">Phase 1 abschließen</button>
+                <button
+                  disabled={!canFinishPhase}
+                  onClick={nextStep}
+                  className="w-full px-3 py-2 rounded-xl bg-semantic-success-base text-neutrals-0 disabled:opacity-40"
+                >
+                  Phase 1 abschließen
+                </button>
               )}
             </div>
           </section>
@@ -491,11 +511,11 @@ function Phase1({ journey, setJourney, nextStep, toasts }) {
 function StoryForm({ value, onChange }) {
   return (
     <div className="space-y-2">
-      <label className="text-sm">Kontext</label>
-      <textarea className="w-full border rounded-xl px-3 py-2" rows={2} value={value.context || ""} onChange={(e) => onChange({ ...value, context: e.target.value })} />
-      <label className="text-sm">Handlung</label>
-      <textarea className="w-full border rounded-xl px-3 py-2" rows={2} value={value.action || ""} onChange={(e) => onChange({ ...value, action: e.target.value })} />
-      <label className="text-sm">Skills</label>
+      <label className="text-small">Kontext</label>
+      <textarea className="w-full rounded-2xl border border-accent-700 p-4" rows={2} value={value.context || ""} onChange={(e) => onChange({ ...value, context: e.target.value })} />
+      <label className="text-small">Handlung</label>
+      <textarea className="w-full rounded-2xl border border-accent-700 p-4" rows={2} value={value.action || ""} onChange={(e) => onChange({ ...value, action: e.target.value })} />
+      <label className="text-small">Skills</label>
       <div className="flex flex-wrap gap-2">
         {DEFAULT_SKILLS.map((s) => {
           const active = (value.skills || []).includes(s);
@@ -508,17 +528,20 @@ function StoryForm({ value, onChange }) {
                 if (active) set.delete(s); else set.add(s);
                 onChange({ ...value, skills: Array.from(set) });
               }}
-              className={cls("px-2 py-1 rounded-full text-xs border", active ? "bg-indigo-600 text-white border-indigo-600" : "bg-white hover:bg-gray-50")}
+              className={cls(
+                "px-2 py-1 rounded-full text-small border",
+                active ? "bg-primary-500 text-neutrals-0 border-primary-500" : "bg-neutrals-0 hover:bg-neutrals-50"
+              )}
             >
               {s}
             </button>
           );
         })}
       </div>
-      <label className="text-sm">Emotion (1–5)</label>
+      <label className="text-small">Emotion (1–5)</label>
       <input type="range" min="1" max="5" value={value.emotion || 3} onChange={(e) => onChange({ ...value, emotion: Number(e.target.value) })} className="w-full" />
-      <label className="text-sm">Impact</label>
-      <textarea className="w-full border rounded-xl px-3 py-2" rows={2} value={value.impact || ""} onChange={(e) => onChange({ ...value, impact: e.target.value })} />
+      <label className="text-small">Impact</label>
+      <textarea className="w-full rounded-2xl border border-accent-700 p-4" rows={2} value={value.impact || ""} onChange={(e) => onChange({ ...value, impact: e.target.value })} />
     </div>
   );
 }
@@ -541,12 +564,12 @@ function Phase2({ journey, setJourney, nextStep, toasts }) {
 
   return (
     <div className="space-y-6">
-      <section className="bg-white rounded-2xl shadow-sm border p-4">
+      <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
         <h2 className="text-lg font-semibold mb-2">Schritt 5: 7 Detail‑Stories</h2>
-        <p className="text-sm text-gray-600 mb-3">Fülle für jede Top‑Experience die Felder aus. Mindestens Skills auswählen.</p>
+        <p className="text-body text-neutrals-600 mb-3">Fülle für jede Top‑Experience die Felder aus. Mindestens Skills auswählen.</p>
         <div className="space-y-4">
           {top.map((e, idx) => (
-            <div key={e.id} className="border rounded-2xl p-3">
+            <div key={e.id} className="border border-accent-700 rounded-2xl p-3">
               <div className="font-medium mb-2">{idx + 1}. {e.title}</div>
               <StoryForm value={stories[e.id] || { skills: [] }} onChange={(val) => setJourney((j) => ({ ...j, stories: { ...(j.stories || {}), [e.id]: val } }))} />
             </div>
@@ -554,24 +577,24 @@ function Phase2({ journey, setJourney, nextStep, toasts }) {
         </div>
       </section>
 
-      <section className="bg-white rounded-2xl shadow-sm border p-4">
+      <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
         <h2 className="text-lg font-semibold mb-2">Schritt 6: AI‑Analyse</h2>
-        <p className="text-sm text-gray-600 mb-3">Extrahiert Themes, Core Values & Implikationen (mocked n8n).</p>
+        <p className="text-body text-neutrals-600 mb-3">Extrahiert Themes, Core Values & Implikationen (mocked n8n).</p>
         <div className="flex items-center gap-2 mb-3">
-          <button onClick={runAnalysis} disabled={!storiesFilled} className="px-3 py-2 rounded-xl bg-indigo-600 text-white disabled:opacity-40">Analyse starten</button>
-          {!storiesFilled && <span className="text-xs text-gray-500">Bitte vorher Stories mit Skills füllen</span>}
+          <button onClick={runAnalysis} disabled={!storiesFilled} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Analyse starten</button>
+          {!storiesFilled && <span className="text-small text-neutrals-500">Bitte vorher Stories mit Skills füllen</span>}
         </div>
         {hasAnalysis && (
           <div className="grid md:grid-cols-3 gap-3">
-            <div className="border rounded-xl p-3"><div className="font-medium mb-1">Themes</div><ul className="list-disc pl-5 text-sm">{journey.analysis.themes.map((t) => <li key={t}>{t}</li>)}</ul></div>
-            <div className="border rounded-xl p-3"><div className="font-medium mb-1">Core Values</div><ul className="list-disc pl-5 text-sm">{journey.analysis.coreValues.map((t) => <li key={t}>{t}</li>)}</ul></div>
-            <div className="border rounded-xl p-3"><div className="font-medium mb-1">Implikationen</div><ul className="list-disc pl-5 text-sm">{journey.analysis.implications.map((t) => <li key={t}>{t}</li>)}</ul></div>
+          <div className="border border-accent-700 rounded-xl p-3"><div className="font-medium mb-1">Themes</div><ul className="list-disc pl-5 text-body">{journey.analysis.themes.map((t) => <li key={t}>{t}</li>)}</ul></div>
+          <div className="border border-accent-700 rounded-xl p-3"><div className="font-medium mb-1">Core Values</div><ul className="list-disc pl-5 text-body">{journey.analysis.coreValues.map((t) => <li key={t}>{t}</li>)}</ul></div>
+          <div className="border border-accent-700 rounded-xl p-3"><div className="font-medium mb-1">Implikationen</div><ul className="list-disc pl-5 text-body">{journey.analysis.implications.map((t) => <li key={t}>{t}</li>)}</ul></div>
           </div>
         )}
       </section>
 
       <div className="flex justify-end">
-        <button onClick={nextStep} disabled={!hasAnalysis} className="px-4 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-40">Phase 2 abschließen</button>
+        <button onClick={nextStep} disabled={!hasAnalysis} className="px-4 py-2 rounded-xl bg-semantic-success-base text-neutrals-0 disabled:opacity-40">Phase 2 abschließen</button>
       </div>
     </div>
   );
@@ -602,9 +625,9 @@ function Phase3({ journey, setJourney, toasts }) {
 
   return (
     <div className="space-y-6">
-      <section className="bg-white rounded-2xl shadow-sm border p-4">
+      <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4">
         <h2 className="text-lg font-semibold mb-2">Schritt 7: Kontextprofil</h2>
-        <p className="text-sm text-gray-600 mb-3">Wähle passende Chips & ergänze Notizen.</p>
+        <p className="text-body text-neutrals-600 mb-3">Wähle passende Chips & ergänze Notizen.</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {CONTEXT_CHIPS.map((c) => {
             const active = (j.context?.chips || []).includes(c);
@@ -616,7 +639,10 @@ function Phase3({ journey, setJourney, toasts }) {
                   active ? set.delete(c) : set.add(c);
                   setJourney((x) => ({ ...x, context: { ...(x.context || {}), chips: Array.from(set) } }));
                 }}
-                className={cls("px-2 py-1 rounded-full text-xs border", active ? "bg-indigo-600 text-white border-indigo-600" : "bg-white hover:bg-gray-50")}
+                className={cls(
+                  "px-2 py-1 rounded-full text-small border",
+                  active ? "bg-primary-500 text-neutrals-0 border-primary-500" : "bg-neutrals-0 hover:bg-neutrals-50"
+                )}
               >
                 {c}
               </button>
@@ -624,7 +650,7 @@ function Phase3({ journey, setJourney, toasts }) {
           })}
         </div>
         <textarea
-          className="w-full border rounded-xl px-3 py-2"
+          className="w-full rounded-2xl border border-accent-700 p-4"
           rows={3}
           placeholder="Rahmenbedingungen, Interessen, Standort‑Wünsche, Gehaltskorridor, etc."
           value={j.context?.notes || ""}
@@ -632,39 +658,39 @@ function Phase3({ journey, setJourney, toasts }) {
         />
       </section>
 
-      <section className="bg-white rounded-2xl shadow-sm border p-4 space-y-3">
+      <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Schritt 8: Career‑Plan</h2>
-          <button onClick={generate} className="px-3 py-2 rounded-xl bg-indigo-600 text-white">Plan generieren</button>
+          <button onClick={generate} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0">Plan generieren</button>
         </div>
         {journey.plan && (
           <div className="grid md:grid-cols-2 gap-3">
-            <div className="border rounded-xl p-3 space-y-2">
-              <label className="text-sm">Zielbild</label>
-              <textarea className="w-full border rounded-xl px-3 py-2" rows={2} value={j.plan.goal} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, goal: e.target.value } }))} />
+            <div className="border border-accent-700 rounded-xl p-3 space-y-2">
+              <label className="text-small">Zielbild</label>
+              <textarea className="w-full rounded-2xl border border-accent-700 p-4" rows={2} value={j.plan.goal} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, goal: e.target.value } }))} />
               <div>
                 <div className="font-medium mb-1">Optionen</div>
                 {(j.plan.options || []).map((o, i) => (
                   <div key={i} className="flex items-center gap-2 mb-2">
-                    <input className="flex-1 border rounded-xl px-3 py-2" value={o} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, options: x.plan.options.map((v, idx) => (idx === i ? e.target.value : v)) } }))} />
-                    <button className="text-gray-500" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, options: x.plan.options.filter((_, idx) => idx !== i) } }))}>✕</button>
+                    <input className="flex-1 h-12 px-4 rounded-2xl border border-accent-700" value={o} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, options: x.plan.options.map((v, idx) => (idx === i ? e.target.value : v)) } }))} />
+                    <button className="text-neutrals-500" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, options: x.plan.options.filter((_, idx) => idx !== i) } }))}>✕</button>
                   </div>
                 ))}
-                <button className="text-sm px-2 py-1 rounded-lg border" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, options: [...(x.plan.options || []), "Neue Option"] } }))}>+ Option</button>
+                <button className="text-small px-2 py-1 rounded-lg border border-accent-700" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, options: [...(x.plan.options || []), "Neue Option"] } }))}>+ Option</button>
               </div>
             </div>
-            <div className="border rounded-xl p-3 space-y-2">
+            <div className="border border-accent-700 rounded-xl p-3 space-y-2">
               <div className="font-medium">Roadmap</div>
               {(j.plan.roadmap || []).map((r, i) => (
-                <div key={i} className="border rounded-xl p-2 mb-2">
-                  <input className="w-full border rounded-lg px-2 py-1 mb-2" value={r.horizon} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, horizon: e.target.value } : v)) } }))} />
+                <div key={i} className="border border-accent-700 rounded-xl p-2 mb-2">
+                  <input className="w-full h-12 px-4 rounded-2xl border border-accent-700 mb-2" value={r.horizon} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, horizon: e.target.value } : v)) } }))} />
                   {(r.actions || []).map((a, k) => (
                     <div key={k} className="flex items-center gap-2 mb-1">
-                      <input className="flex-1 border rounded-lg px-2 py-1" value={a} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, actions: v.actions.map((av, ak) => (ak === k ? e.target.value : av)) } : v)) } }))} />
-                      <button className="text-gray-500" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, actions: v.actions.filter((_, ak) => ak !== k) } : v)) } }))}>✕</button>
+                      <input className="flex-1 h-12 px-4 rounded-2xl border border-accent-700" value={a} onChange={(e) => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, actions: v.actions.map((av, ak) => (ak === k ? e.target.value : av)) } : v)) } }))} />
+                      <button className="text-neutrals-500" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, actions: v.actions.filter((_, ak) => ak !== k) } : v)) } }))}>✕</button>
                     </div>
                   ))}
-                  <button className="text-xs px-2 py-1 rounded-lg border" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, actions: [...v.actions, "Neue Aktion"] } : v)) } }))}>+ Aktion</button>
+                  <button className="text-small px-2 py-1 rounded-lg border border-accent-700" onClick={() => setJourney((x) => ({ ...x, plan: { ...x.plan, roadmap: x.plan.roadmap.map((v, idx) => (idx === i ? { ...v, actions: [...v.actions, "Neue Aktion"] } : v)) } }))}>+ Aktion</button>
                 </div>
               ))}
             </div>
@@ -672,7 +698,7 @@ function Phase3({ journey, setJourney, toasts }) {
         )}
         <div className="flex items-center gap-2">
           <button
-            className="px-3 py-2 rounded-xl border"
+            className="px-3 py-2 rounded-xl border border-accent-700"
             onClick={() => {
               const md = asMarkdown(journey);
               const link = document.createElement("a");
@@ -685,7 +711,7 @@ function Phase3({ journey, setJourney, toasts }) {
           >
             Export: Markdown
           </button>
-          <button className="px-3 py-2 rounded-xl border" onClick={() => window.print()}>Export: PDF (Drucken)</button>
+          <button className="px-3 py-2 rounded-xl border border-accent-700" onClick={() => window.print()}>Export: PDF (Drucken)</button>
         </div>
       </section>
     </div>
@@ -757,10 +783,10 @@ export default function CareerNavigator() {
   return (
     <Shell step={step} setStep={setStep} saveState={saveState}>
       {step === 0 && (
-        <section className="bg-white rounded-2xl shadow-sm border p-6">
+        <section className="bg-neutrals-0 rounded-2xl shadow-elevation2 border border-accent-700 p-6">
           <h1 className="text-2xl font-semibold mb-2">Willkommen zum Career Navigator (MVP)</h1>
-          <p className="text-gray-600 mb-4">Geführter 8‑Schritte‑Prozess nach „Seven Stories“. Alles lokal, ohne Login. Du kannst jederzeit zurückkehren – Autosave ist aktiv.</p>
-          <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-1 mb-4">
+          <p className="text-body text-neutrals-600 mb-4">Geführter 8‑Schritte‑Prozess nach „Seven Stories“. Alles lokal, ohne Login. Du kannst jederzeit zurückkehren – Autosave ist aktiv.</p>
+          <ol className="list-decimal pl-5 text-body text-neutrals-700 space-y-1 mb-4">
             <li>20 Experiences sammeln, taggen & clustern</li>
             <li>Top‑7 ranken</li>
             <li>7 Detail‑Stories schreiben</li>
@@ -769,7 +795,7 @@ export default function CareerNavigator() {
             <li>Career‑Plan generieren & exportieren</li>
           </ol>
           <div className="flex items-center gap-2">
-            <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl bg-indigo-600 text-white">Starten</button>
+            <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl bg-primary-500 text-neutrals-0">Starten</button>
             <button onClick={reset} className="px-4 py-2 rounded-xl border">Zurücksetzen</button>
           </div>
         </section>
@@ -785,7 +811,7 @@ export default function CareerNavigator() {
           />
           <div className="flex justify-between">
             <button onClick={prevStep} className="px-3 py-2 rounded-xl border">Zurück</button>
-            <button onClick={() => setStep(5)} disabled={!phaseDone.p1} className="px-3 py-2 rounded-xl bg-indigo-600 text-white disabled:opacity-40">Weiter zu Phase 2</button>
+            <button onClick={() => setStep(5)} disabled={!phaseDone.p1} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 2</button>
           </div>
         </div>
       )}
@@ -795,7 +821,7 @@ export default function CareerNavigator() {
           <Phase2 journey={journey} setJourney={setJourney} nextStep={() => setStep(7)} toasts={{ push }} />
           <div className="flex justify-between mt-4">
             <button onClick={() => setStep(4)} className="px-3 py-2 rounded-xl border">Zurück zu Phase 1</button>
-            <button onClick={() => setStep(7)} disabled={!phaseDone.p2} className="px-3 py-2 rounded-xl bg-indigo-600 text-white disabled:opacity-40">Weiter zu Phase 3</button>
+            <button onClick={() => setStep(7)} disabled={!phaseDone.p2} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 3</button>
           </div>
         </div>
       )}
@@ -805,7 +831,7 @@ export default function CareerNavigator() {
           <Phase3 journey={journey} setJourney={setJourney} toasts={{ push }} />
           <div className="flex justify-between mt-4">
             <button onClick={() => setStep(6)} className="px-3 py-2 rounded-xl border">Zurück zu Phase 2</button>
-            <button onClick={() => setStep(8)} className="px-3 py-2 rounded-xl bg-indigo-600 text-white">Fertig</button>
+            <button onClick={() => setStep(8)} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0">Fertig</button>
           </div>
         </div>
       )}
