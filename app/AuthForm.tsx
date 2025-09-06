@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabaseClient";
+import { getSupabaseClient } from "../lib/supabaseClient";
 
 type AuthMode = "login" | "signup";
 
@@ -19,24 +19,55 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       setError("PIN must be exactly 4 digits");
       return;
     }
-    const authFn = mode === "signup" ? supabase.auth.signUp : supabase.auth.signInWithPassword;
-    const { error } = await authFn({ email, password: pin });
-    if (error) {
-      setError(error.message);
-    } else {
+    try {
+      const supabase = getSupabaseClient();
+      const password = pin.padEnd(6, "0");
+      if (mode === "signup") {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) {
+          setError(signUpError.message);
+          return;
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          setError(signInError.message);
+          return;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) {
+          setError(error.message);
+          return;
+        }
+      }
       router.push("/");
+    } catch (e) {
+      setError((e as Error).message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-xs">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
-        className="border p-2"
+        className={`p-3 rounded border ${
+          mode === "login"
+            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-300"
+            : "border-gray-300"
+        }`}
       />
       <input
         type="password"
@@ -47,10 +78,21 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         maxLength={4}
         inputMode="numeric"
         title="PIN must be exactly 4 digits"
-        className="border p-2"
+        className={`p-3 rounded border ${
+          mode === "login"
+            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-300"
+            : "border-gray-300"
+        }`}
       />
       {error && <p className="text-red-600 text-sm">{error}</p>}
-      <button type="submit" className="bg-blue-600 text-white p-2">
+      <button
+        type="submit"
+        className={`${
+          mode === "signup"
+            ? "bg-green-600 hover:bg-green-500"
+            : "bg-indigo-500 hover:bg-indigo-400"
+        } text-white p-3 rounded transition-colors`}
+      >
         {mode === "signup" ? "Sign Up" : "Log In"}
       </button>
     </form>
