@@ -564,21 +564,12 @@ function Phase4({ journey, onNext, onBack }) {
   const analyze = async () => {
     try {
       setLoading(true);
-      const payload = (journey.top7Ids || []).map((id) => {
-        const exp = (journey.experiences || []).find((e) => e.id === id) || {};
-        const story = (journey.stories || {})[id] || {};
-        return {
-          title: exp.title || "",
-          context: story.context || "",
-          impact: story.impact || "",
-        };
-      });
       const res = await fetch(
         "https://chrismzke.app.n8n.cloud/webhook-test/c4123f59-47a3-4f9b-a225-126d780722e9",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ experiences: payload }),
+          body: JSON.stringify({ userId: journey.userId, journeyId: journey.id }),
         },
       );
       const text = await res.text();
@@ -675,7 +666,7 @@ export default function CareerNavigator() {
   const { toasts, push } = useToasts();
   const [step, setStep] = useState(0); // 0=Intro, 1..5 phases
   const [saveState, setSaveState] = useState("idle");
-  const [journey, setJourney] = useState({ id: null, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
+  const [journey, setJourney] = useState({ id: null, userId: null, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
 
   useEffect(() => {
     async function load() {
@@ -698,7 +689,7 @@ export default function CareerNavigator() {
         const { data: profileRow } = await supabase.from('context_profiles').select('notes').eq('journey_id', journeyId).single();
         let profile = {};
         if (profileRow?.notes) { try { profile = JSON.parse(profileRow.notes); } catch {} }
-        setJourney({ id: journeyId, experiences, ranking, top7Ids, stories, profile });
+        setJourney({ id: journeyId, userId: user.id, experiences, ranking, top7Ids, stories, profile });
       } catch (e) {
         console.error(e);
       }
@@ -713,7 +704,7 @@ export default function CareerNavigator() {
       if (!user) return;
       setSaveState('saving');
       const { data: newJ } = await supabase.from('journeys').insert({ user_id: user.id }).select().single();
-      setJourney({ id: newJ.id, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
+      setJourney({ id: newJ.id, userId: user.id, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
       setStep(0);
       push("Zurückgesetzt");
       setSaveState('idle');
