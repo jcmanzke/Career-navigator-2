@@ -130,6 +130,95 @@ function DraggableList({ items, setItems, render, itemKey }) {
   );
 }
 
+// --- Voice-enabled textarea -------------------------------------------------
+function VoiceTextarea({ value, onChange, placeholder }) {
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [lastTranscript, setLastTranscript] = useState("");
+  const mediaRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  const toggle = async () => {
+    if (recording) {
+      mediaRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      mediaRef.current = mr;
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => chunksRef.current.push(e.data);
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        send(blob);
+      };
+      mr.start();
+      setRecording(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const send = async (blob) => {
+    setRecording(false);
+    setTranscribing(true);
+    const fd = new FormData();
+    fd.append("file", blob, "audio.webm");
+    try {
+      const res = await fetch("/api/transcribe", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.text) {
+        setLastTranscript(data.text);
+        const next = value ? value + " " + data.text : data.text;
+        onChange(next);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setTranscribing(false);
+  };
+
+  const deleteLast = () => {
+    if (!lastTranscript) return;
+    if (value.endsWith(lastTranscript)) {
+      const next = value.slice(0, -lastTranscript.length).trim();
+      onChange(next);
+    }
+    setLastTranscript("");
+  };
+
+  return (
+    <div>
+      <div className="mb-1 flex justify-end items-center gap-2">
+        {recording && <span className="text-small text-neutrals-600">Recording…</span>}
+        {transcribing && <span className="text-small text-neutrals-600">Transcribing…</span>}
+        {!recording && lastTranscript && (
+          <button type="button" onClick={deleteLast} className="px-2 py-1 rounded-xl border">
+            Delete last
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex items-center gap-1 px-2 py-1 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+        >
+          <span>🎙️</span>
+          {recording ? "Stop" : "Record"}
+        </button>
+      </div>
+      <textarea
+        className="w-full rounded-2xl border border-accent-700 p-3 mb-2"
+        rows={2}
+        placeholder={placeholder}
+        value={value}
+        onChange={(ev) => onChange(ev.target.value)}
+      />
+    </div>
+  );
+}
+
 // --- Shell -----------------------------------------------------------------
 function Shell({ step, setStep, saveState, children }) {
   const [email, setEmail] = useState<string | null>(null);
@@ -302,8 +391,14 @@ function Phase1({ journey, setJourney, onNext, setSaveState }) {
         </ul>
         <div className="mt-2 text-small text-neutrals-500">{exps.length}/15</div>
       </section>
-      <div className="flex justify-end">
-        <button onClick={onNext} disabled={!canNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 2</button>
+      <div className="flex justify-end pt-8">
+        <button
+          onClick={onNext}
+          disabled={!canNext}
+          className="px-3 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900 disabled:opacity-40"
+        >
+          Weiter zu Phase 2
+        </button>
       </div>
     </div>
   );
@@ -357,9 +452,15 @@ function Phase2({ journey, setJourney, onNext, onBack, setSaveState }) {
           itemKey={(e) => e.id}
         />
       </section>
-      <div className="flex justify-between">
+      <div className="flex justify-between pt-8">
         <button onClick={onBack} className="px-3 py-2 rounded-xl border">Zurück</button>
-        <button onClick={onNext} disabled={!canNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 3</button>
+        <button
+          onClick={onNext}
+          disabled={!canNext}
+          className="px-3 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900 disabled:opacity-40"
+        >
+          Weiter zu Phase 3
+        </button>
       </div>
     </div>
   );
@@ -367,7 +468,11 @@ function Phase2({ journey, setJourney, onNext, onBack, setSaveState }) {
 
 // --- Phase 3 ---------------------------------------------------
 function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
-  const top = (journey.top7Ids || [])
+  const topIds =
+    journey.top7Ids && journey.top7Ids.length > 0
+      ? journey.top7Ids
+      : (journey.ranking || []).slice(0, 7);
+  const top = topIds
     .map((id) => (journey.experiences || []).find((e) => e.id === id))
     .filter(Boolean);
   const stories = journey.stories || {};
@@ -423,43 +528,100 @@ function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
           {top.map((e, idx) => (
             <div key={e.id} className="border border-accent-700 rounded-2xl p-3">
               <div className="font-medium mb-2">{idx + 1}. {e.title}</div>
-              <textarea
-                className="w-full rounded-2xl border border-accent-700 p-3 mb-2"
-                rows={2}
+              <VoiceTextarea
                 placeholder="Kontext"
                 value={stories[e.id]?.context || ""}
-                onChange={(ev) => update(e.id, "context", ev.target.value)}
+                onChange={(v) => update(e.id, "context", v)}
               />
-              <textarea
-                className="w-full rounded-2xl border border-accent-700 p-3"
-                rows={2}
+              <VoiceTextarea
                 placeholder="Impact"
                 value={stories[e.id]?.impact || ""}
-                onChange={(ev) => update(e.id, "impact", ev.target.value)}
+                onChange={(v) => update(e.id, "impact", v)}
               />
             </div>
           ))}
         </div>
       </section>
-      <div className="flex justify-between">
+      <div className="flex justify-between pt-8">
         <button onClick={onBack} className="px-3 py-2 rounded-xl border">Zurück</button>
-        <button onClick={handleNext} disabled={!canNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 4</button>
+        <button
+          onClick={handleNext}
+          disabled={!canNext}
+          className="px-3 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900 disabled:opacity-40"
+        >
+          Weiter zu Phase 4
+        </button>
       </div>
     </div>
   );
 }
 
 // --- Phase 4 ---------------------------------------------------
-function Phase4({ onNext, onBack }) {
+function Phase4({ journey, onNext, onBack }) {
+  const [analysis, setAnalysis] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const analyze = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        "https://chrismzke.app.n8n.cloud/webhook-test/c4123f59-47a3-4f9b-a225-126d780722e9",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: journey.userId, journeyId: journey.id }),
+        },
+      );
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        const toText = (val) => {
+          if (val == null) return "";
+          if (typeof val === "string") return val;
+          if (Array.isArray(val)) return val.map(toText).join("\n\n");
+          if (typeof val === "object") return Object.values(val).map(toText).join("\n\n");
+          return String(val);
+        };
+        setAnalysis(toText(json));
+      } catch {
+        setAnalysis(text);
+      }
+    } catch (e) {
+      console.error(e);
+      setAnalysis("Fehler bei der Analyse");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <section className={cls(cardCls, "p-4")}>
         <h2 className="text-lg font-semibold mb-2">Phase 4: AI‑Analyse</h2>
-        <p className="text-body text-neutrals-600">Die Analyse und Clusterung der Erfahrungen wird später durch einen externen AI‑Service durchgeführt.</p>
+        <p className="text-body text-neutrals-600 mb-3">Die Analyse und Clusterung der Erfahrungen wird später durch einen externen AI‑Service durchgeführt.</p>
+        <button
+          type="button"
+          onClick={analyze}
+          className="px-3 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+        >
+          {loading ? "Analysiere…" : "Ergebnisse analysieren"}
+        </button>
+        {analysis && (
+          <textarea
+            className="mt-4 w-full p-2 border rounded text-small text-neutrals-700"
+            readOnly
+            value={analysis}
+          />
+        )}
       </section>
-      <div className="flex justify-between">
+      <div className="flex justify-between pt-8">
         <button onClick={onBack} className="px-3 py-2 rounded-xl border">Zurück</button>
-        <button onClick={onNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0">Weiter zu Phase 5</button>
+        <button
+          onClick={onNext}
+          className="px-3 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+        >
+          Weiter zu Phase 5
+        </button>
       </div>
     </div>
   );
@@ -503,7 +665,7 @@ function Phase5({ journey, setJourney, onBack, setSaveState }) {
           onChange={(e) => updateField('current', e.target.value)}
         />
       </section>
-      <div className="flex justify-start">
+      <div className="flex justify-start pt-8">
         <button onClick={onBack} className="px-3 py-2 rounded-xl border">Zurück</button>
       </div>
     </div>
@@ -515,7 +677,7 @@ export default function CareerNavigator() {
   const { toasts, push } = useToasts();
   const [step, setStep] = useState(0); // 0=Intro, 1..5 phases
   const [saveState, setSaveState] = useState("idle");
-  const [journey, setJourney] = useState({ id: null, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
+  const [journey, setJourney] = useState({ id: null, userId: null, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
 
   useEffect(() => {
     async function load() {
@@ -538,7 +700,7 @@ export default function CareerNavigator() {
         const { data: profileRow } = await supabase.from('context_profiles').select('notes').eq('journey_id', journeyId).single();
         let profile = {};
         if (profileRow?.notes) { try { profile = JSON.parse(profileRow.notes); } catch {} }
-        setJourney({ id: journeyId, experiences, ranking, top7Ids, stories, profile });
+        setJourney({ id: journeyId, userId: user.id, experiences, ranking, top7Ids, stories, profile });
       } catch (e) {
         console.error(e);
       }
@@ -553,7 +715,7 @@ export default function CareerNavigator() {
       if (!user) return;
       setSaveState('saving');
       const { data: newJ } = await supabase.from('journeys').insert({ user_id: user.id }).select().single();
-      setJourney({ id: newJ.id, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
+      setJourney({ id: newJ.id, userId: user.id, experiences: [], ranking: [], top7Ids: [], stories: {}, profile: {} });
       setStep(0);
       push("Zurückgesetzt");
       setSaveState('idle');
@@ -577,7 +739,12 @@ export default function CareerNavigator() {
             <li>Hintergrundinfos</li>
           </ol>
           <div className="flex items-center gap-2">
-            <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl bg-primary-500 text-neutrals-0">Starten</button>
+            <button
+              onClick={() => setStep(1)}
+              className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+            >
+              Starten
+            </button>
             <button onClick={reset} className="px-4 py-2 rounded-xl border">Zurücksetzen</button>
           </div>
         </section>
@@ -585,7 +752,9 @@ export default function CareerNavigator() {
       {step === 1 && <Phase1 journey={journey} setJourney={setJourney} onNext={() => setStep(2)} setSaveState={setSaveState} />}
       {step === 2 && <Phase2 journey={journey} setJourney={setJourney} onNext={() => setStep(3)} onBack={() => setStep(1)} setSaveState={setSaveState} />}
       {step === 3 && <Phase3 journey={journey} setJourney={setJourney} onNext={() => setStep(4)} onBack={() => setStep(2)} setSaveState={setSaveState} />}
-      {step === 4 && <Phase4 onNext={() => setStep(5)} onBack={() => setStep(3)} />}
+      {step === 4 && (
+        <Phase4 journey={journey} onNext={() => setStep(5)} onBack={() => setStep(3)} />
+      )}
       {step === 5 && <Phase5 journey={journey} setJourney={setJourney} onBack={() => setStep(4)} setSaveState={setSaveState} />}
       <Toasts toasts={toasts} />
     </Shell>
