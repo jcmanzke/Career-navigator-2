@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "node scripts/lint-stub.js",
-    "test": "echo 'No tests specified'"
+    "test": "echo 'No tests specified'",
+    "check:supabase": "node scripts/checkSupabase.mjs"
   },
   "dependencies": {
     "next": "^15.5.1-canary.24",
