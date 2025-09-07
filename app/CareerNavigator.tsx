@@ -367,7 +367,11 @@ function Phase2({ journey, setJourney, onNext, onBack, setSaveState }) {
 
 // --- Phase 3 ---------------------------------------------------
 function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
-  const top = (journey.top7Ids || [])
+  const topIds =
+    journey.top7Ids && journey.top7Ids.length > 0
+      ? journey.top7Ids
+      : (journey.ranking || []).slice(0, 7);
+  const top = topIds
     .map((id) => (journey.experiences || []).find((e) => e.id === id))
     .filter(Boolean);
   const stories = journey.stories || {};
