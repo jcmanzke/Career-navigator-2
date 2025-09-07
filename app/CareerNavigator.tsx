@@ -130,6 +130,95 @@ function DraggableList({ items, setItems, render, itemKey }) {
   );
 }
 
+// --- Voice-enabled textarea -------------------------------------------------
+function VoiceTextarea({ value, onChange, placeholder }) {
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [lastTranscript, setLastTranscript] = useState("");
+  const mediaRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  const toggle = async () => {
+    if (recording) {
+      mediaRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      mediaRef.current = mr;
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => chunksRef.current.push(e.data);
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        send(blob);
+      };
+      mr.start();
+      setRecording(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const send = async (blob) => {
+    setRecording(false);
+    setTranscribing(true);
+    const fd = new FormData();
+    fd.append("file", blob, "audio.webm");
+    try {
+      const res = await fetch("/api/transcribe", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.text) {
+        setLastTranscript(data.text);
+        const next = value ? value + " " + data.text : data.text;
+        onChange(next);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setTranscribing(false);
+  };
+
+  const deleteLast = () => {
+    if (!lastTranscript) return;
+    if (value.endsWith(lastTranscript)) {
+      const next = value.slice(0, -lastTranscript.length).trim();
+      onChange(next);
+    }
+    setLastTranscript("");
+  };
+
+  return (
+    <div>
+      <div className="mb-1 flex justify-end items-center gap-2">
+        {recording && <span className="text-small text-neutrals-600">Recording…</span>}
+        {transcribing && <span className="text-small text-neutrals-600">Transcribing…</span>}
+        {!recording && lastTranscript && (
+          <button type="button" onClick={deleteLast} className="px-2 py-1 rounded-xl border">
+            Delete last
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex items-center gap-1 px-2 py-1 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+        >
+          <span>🎙️</span>
+          {recording ? "Stop" : "Record"}
+        </button>
+      </div>
+      <textarea
+        className="w-full rounded-2xl border border-accent-700 p-3 mb-2"
+        rows={2}
+        placeholder={placeholder}
+        value={value}
+        onChange={(ev) => onChange(ev.target.value)}
+      />
+    </div>
+  );
+}
+
 // --- Shell -----------------------------------------------------------------
 function Shell({ step, setStep, saveState, children }) {
   const [email, setEmail] = useState<string | null>(null);
@@ -367,7 +456,11 @@ function Phase2({ journey, setJourney, onNext, onBack, setSaveState }) {
 
 // --- Phase 3 ---------------------------------------------------
 function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
-  const top = (journey.top7Ids || [])
+  const topIds =
+    journey.top7Ids && journey.top7Ids.length > 0
+      ? journey.top7Ids
+      : (journey.ranking || []).slice(0, 7);
+  const top = topIds
     .map((id) => (journey.experiences || []).find((e) => e.id === id))
     .filter(Boolean);
   const stories = journey.stories || {};
@@ -423,27 +516,29 @@ function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
           {top.map((e, idx) => (
             <div key={e.id} className="border border-accent-700 rounded-2xl p-3">
               <div className="font-medium mb-2">{idx + 1}. {e.title}</div>
-              <textarea
-                className="w-full rounded-2xl border border-accent-700 p-3 mb-2"
-                rows={2}
+              <VoiceTextarea
                 placeholder="Kontext"
                 value={stories[e.id]?.context || ""}
-                onChange={(ev) => update(e.id, "context", ev.target.value)}
+                onChange={(v) => update(e.id, "context", v)}
               />
-              <textarea
-                className="w-full rounded-2xl border border-accent-700 p-3"
-                rows={2}
+              <VoiceTextarea
                 placeholder="Impact"
                 value={stories[e.id]?.impact || ""}
-                onChange={(ev) => update(e.id, "impact", ev.target.value)}
+                onChange={(v) => update(e.id, "impact", v)}
               />
             </div>
           ))}
         </div>
       </section>
-      <div className="flex justify-between">
+      <div className="flex justify-between mt-6">
         <button onClick={onBack} className="px-3 py-2 rounded-xl border">Zurück</button>
-        <button onClick={handleNext} disabled={!canNext} className="px-3 py-2 rounded-xl bg-primary-500 text-neutrals-0 disabled:opacity-40">Weiter zu Phase 4</button>
+        <button
+          onClick={handleNext}
+          disabled={!canNext}
+          className="px-3 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900 disabled:opacity-40"
+        >
+          Weiter zu Phase 4
+        </button>
       </div>
     </div>
   );
