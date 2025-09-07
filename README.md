@@ -35,6 +35,16 @@ http://localhost:3000
 7. Start the dev server with `npm run dev` and open <http://localhost:3000>.
 8. Sign up with your email and a four‑digit PIN, then use those details to log in.
 
+### Verify the connection
+
+You can check that the app can reach your Supabase project by running:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-url NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key npm run check:supabase
+```
+
+If you see an error, confirm the URL and key match the values from your Supabase dashboard and that your network allows outbound HTTPS requests.
+
 ## Stack
 
 - Next.js 14 (App Router)

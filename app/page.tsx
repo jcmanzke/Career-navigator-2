@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import CareerNavigatorLoader from "./CareerNavigatorLoader";
 import AuthForm from "./AuthForm";
-import { getSupabaseClient } from "../lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {
   const [session, setSession] = useState<Session | null>(null);
@@ -15,7 +15,7 @@ export default function Page() {
   useEffect(() => {
     let unsubscribe = () => {};
     try {
-      const supabase = getSupabaseClient();
+      const supabase = createClient();
       supabase.auth.getSession().then(({ data }) => {
         setSession(data.session);
         setLoading(false);
@@ -39,7 +39,7 @@ export default function Page() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-red-600">{error}</p>
+        <p className="text-semantic-error-base">{error}</p>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export default function Page() {
           <AuthForm mode={authMode} />
           <button
             onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
-            className="text-sm text-blue-600 underline"
+            className="text-small text-primary-500 underline"
           >
             {authMode === "login" ? "Need an account? Sign up" : "Have an account? Log in"}
           </button>

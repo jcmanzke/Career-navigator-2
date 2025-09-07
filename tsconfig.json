@@ -12,6 +12,10 @@
     "strict": false,
     "noEmit": true,
     "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["*"]
+    },
     "types": [
       "node"
     ],
