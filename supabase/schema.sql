@@ -78,6 +78,12 @@ create table public.stories (
   emotion int check (emotion between 1 and 5),
   impact text
 );
+alter table public.stories enable row level security;
+create policy "story_owner"
+  on public.stories
+  using (auth.uid() = (select user_id from public.journeys j where j.id = stories.journey_id))
+  with check (auth.uid() = (select user_id from public.journeys j where j.id = stories.journey_id));
+create unique index stories_journey_experience_idx on public.stories (journey_id, experience_id);
 
 -- AI analysis result
 create table public.analysis (
