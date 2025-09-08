@@ -94,6 +94,18 @@ create table public.analysis (
   top_skills text[] default '{}'
 );
 
+-- Stored Phase 4 analysis in Markdown
+create table public.analysis_results (
+  journey_id uuid primary key references public.journeys(id) on delete cascade,
+  content text,
+  created_at timestamptz default now()
+);
+alter table public.analysis_results enable row level security;
+create policy "analysis_results_owner"
+  on public.analysis_results
+  using (auth.uid() = (select user_id from public.journeys j where j.id = analysis_results.journey_id))
+  with check (auth.uid() = (select user_id from public.journeys j where j.id = analysis_results.journey_id));
+
 -- Context profile
 create table public.context_profiles (
   journey_id uuid primary key references public.journeys(id) on delete cascade,
