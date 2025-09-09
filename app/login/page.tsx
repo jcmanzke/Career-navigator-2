@@ -64,12 +64,12 @@ export default function LoginPage() {
 
       {/* Foreground content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
-        <div className="absolute top-10 left-0 right-0 text-center">
-          <h1 className="font-display font-bold text-white text-[40px] md:text-[64px] lg:text-[72px]">Career Navigator</h1>
+        <div className="absolute left-0 right-0 text-center top-[16vh] md:top-[18vh] lg:top-[20vh]">
+          <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
         </div>
         <div className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
           <AuthForm mode="login" />
-          <a href="/signup" className="text-small text-primary-500 underline">
+          <a href="/signup" className="text-small text-[#2C2C2C] underline">
             Need an account? Sign up
           </a>
         </div>
