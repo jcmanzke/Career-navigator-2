@@ -130,7 +130,7 @@ export default function Page() {
             <AuthForm mode={authMode} />
             <button
               onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
-              className="block text-center mt-5 md:mt-6 text-small text-[#2C2C2C] underline"
+              className="block text-center mt-8 md:mt-10 text-small text-[#2C2C2C] underline"
             >
               {authMode === "login" ? "Need an account? Sign up" : "Have an account? Log in"}
             </button>

@@ -90,7 +90,7 @@ export default function LoginPage() {
         </div>
         <div ref={cardRef} className="space-y-3 text-left rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-5 pt-6 max-w-sm w-full">
           <AuthForm mode="login" />
-          <a href="/signup" className="block text-center mt-5 md:mt-6 text-small text-[#2C2C2C] underline">
+          <a href="/signup" className="block text-center mt-8 md:mt-10 text-small text-[#2C2C2C] underline">
             Need an account? Sign up
           </a>
         </div>
