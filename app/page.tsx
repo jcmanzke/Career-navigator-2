@@ -8,6 +8,8 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [showPoster, setShowPoster] = useState(true);
   const [needsTap, setNeedsTap] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
@@ -65,6 +67,25 @@ export default function Page() {
     };
   }, [loading, session]);
 
+  // Position header vertically centered between screen top and card top
+  useEffect(() => {
+    if (loading) return;
+    const reposition = () => {
+      const card = cardRef.current;
+      const header = headerRef.current;
+      if (!card || !header) return;
+      const cardRect = card.getBoundingClientRect();
+      const headerRect = header.getBoundingClientRect();
+      const available = Math.max(0, cardRect.top);
+      const top = Math.max(12, Math.round((available - headerRect.height) / 2));
+      header.style.top = `${top}px`;
+    };
+    reposition();
+    window.addEventListener("resize", reposition);
+    const t = setInterval(reposition, 300);
+    return () => { window.removeEventListener("resize", reposition); clearInterval(t); };
+  }, [loading]);
+
   if (loading) return null;
 
   if (error) {
@@ -102,10 +123,10 @@ export default function Page() {
         <div className="fixed inset-0 z-0 bg-neutrals-900/20 backdrop-blur-[1px]" aria-hidden="true" />
         {/* Foreground content */}
         <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
-          <div className="absolute left-0 right-0 text-center top-[16vh] md:top-[18vh] lg:top-[20vh]">
+          <div ref={headerRef} className="absolute left-0 right-0 text-center">
             <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
           </div>
-          <div className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
+          <div ref={cardRef} className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
             <AuthForm mode={authMode} />
             <button
               onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}

@@ -7,6 +7,9 @@ export default function LoginPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [showPoster, setShowPoster] = useState(true);
   const [needsTap, setNeedsTap] = useState(false);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [headerTop, setHeaderTop] = useState<number>(80);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -36,6 +39,24 @@ export default function LoginPage() {
       v.removeEventListener("playing", onPlaying);
     };
   }, []);
+
+  // Position header vertically centered between top of screen and top of card
+  useEffect(() => {
+    const reposition = () => {
+      const card = cardRef.current;
+      const header = headerRef.current;
+      if (!card || !header) return;
+      const cardRect = card.getBoundingClientRect();
+      const headerRect = header.getBoundingClientRect();
+      const available = Math.max(0, cardRect.top); // space from screen top to card top
+      const top = Math.max(12, Math.round((available - headerRect.height) / 2));
+      setHeaderTop(top);
+    };
+    reposition();
+    window.addEventListener("resize", reposition);
+    const t = setInterval(reposition, 300); // account for font/video loading shifts
+    return () => { window.removeEventListener("resize", reposition); clearInterval(t); };
+  }, []);
   return (
     <div className="relative min-h-screen">
       {/* Poster layer (visible until video plays) */}
@@ -64,10 +85,10 @@ export default function LoginPage() {
 
       {/* Foreground content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
-        <div className="absolute left-0 right-0 text-center top-[16vh] md:top-[18vh] lg:top-[20vh]">
+        <div ref={headerRef} className="absolute left-0 right-0 text-center" style={{ top: headerTop }}>
           <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
         </div>
-        <div className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
+        <div ref={cardRef} className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
           <AuthForm mode="login" />
           <a href="/signup" className="text-small text-[#2C2C2C] underline">
             Need an account? Sign up
