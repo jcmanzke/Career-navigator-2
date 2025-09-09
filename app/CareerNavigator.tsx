@@ -135,6 +135,7 @@ function DraggableList({ items, setItems, render, itemKey }) {
 function VoiceTextarea({ value, onChange, placeholder }) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [transcribeProgress, setTranscribeProgress] = useState(0);
   const [lastTranscript, setLastTranscript] = useState("");
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -146,29 +147,38 @@ function VoiceTextarea({ value, onChange, placeholder }) {
   const transcribeAll = async () => {
     try {
       setTranscribing(true);
-      // Combine captured chunks into a single Blob to ensure proper container headers
-      const type = (chunksRef.current[0] && (chunksRef.current[0] as any).type) || "audio/webm";
-      const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
-      const combined = new Blob(chunksRef.current, { type });
-      const fd = new FormData();
-      fd.append("file", combined, `audio.${ext}`);
-      const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
-        method: "POST",
-        body: fd,
-        cache: "no-store",
-      } as RequestInit);
-      const data = await res.json().catch(() => ({}));
-      if (data?.text) {
-        setLastTranscript(data.text);
+      setTranscribeProgress(0);
+      let fullText = "";
+      const total = chunksRef.current.length || 1;
+      for (let i = 0; i < chunksRef.current.length; i++) {
+        const blob = chunksRef.current[i];
+        const type = ((blob as any).type as string) || "audio/webm";
+        const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
+        const fd = new FormData();
+        fd.append("file", blob, `part-${i}.${ext}`);
+        const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
+          method: "POST",
+          body: fd,
+          cache: "no-store",
+        } as RequestInit);
+        const data = await res.json().catch(() => ({}));
+        if (data?.text) {
+          fullText += (fullText ? " " : "") + data.text;
+        }
+        setTranscribeProgress(Math.round(((i + 1) / total) * 100));
+      }
+      if (fullText) {
+        setLastTranscript(fullText);
         const base = valueRef.current || "";
         const sep = base && !base.endsWith(" ") ? " " : "";
-        const next = (base + sep + data.text).trimStart();
+        const next = (base + sep + fullText).trimStart();
         onChange(next);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setTranscribing(false);
+      setTranscribeProgress(0);
       // reset buffer after processing
       chunksRef.current = [];
     }
@@ -264,7 +274,9 @@ function VoiceTextarea({ value, onChange, placeholder }) {
     <div>
       <div className="mb-1 flex justify-end items-center gap-2">
         {recording && <span className="text-small text-neutrals-600">Recording…</span>}
-        {transcribing && <span className="text-small text-neutrals-600">Transcribing…</span>}
+        {transcribing && (
+          <span className="text-small text-neutrals-600">Transcribing… {transcribeProgress}%</span>
+        )}
         {!recording && lastTranscript && (
           <button type="button" onClick={deleteLast} className="px-2 py-1 rounded-xl border">
             Delete last
