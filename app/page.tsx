@@ -37,19 +37,11 @@ export default function Page() {
     return unsubscribe;
   }, []);
 
-  if (loading) return null;
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-semantic-error-base">{error}</p>
-      </div>
-    );
-  }
-
+  // Important: place hooks before any early returns to keep hook order stable
   // Setup background video autoplay assistance for the unauthenticated view
   useEffect(() => {
-    if (session) return; // only apply when logged out
+    // Only attempt when not loading and user is logged out
+    if (loading || session) return;
     const v = videoRef.current;
     if (!v) return;
     try { v.muted = true; (v as any).defaultMuted = true; } catch {}
@@ -71,7 +63,18 @@ export default function Page() {
       v.removeEventListener("canplay", onCanPlay);
       v.removeEventListener("playing", onPlaying);
     };
-  }, [session]);
+  }, [loading, session]);
+
+  if (loading) return null;
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-semantic-error-base">{error}</p>
+      </div>
+    );
+  }
+
 
   if (!session) {
     return (
