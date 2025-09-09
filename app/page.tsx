@@ -126,7 +126,7 @@ export default function Page() {
           <div ref={headerRef} className="absolute left-0 right-0 text-center">
             <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
           </div>
-          <div ref={cardRef} className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
+          <div ref={cardRef} className="space-y-3 text-left rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-5 pt-6 max-w-sm w-full">
             <AuthForm mode={authMode} />
             <button
               onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}

@@ -45,8 +45,8 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-xs text-left">
-      <label className="text-small text-neutrals-600 mt-8 mb-1 block">eMail</label>
+    <form onSubmit={handleSubmit} className="mx-auto w-full flex flex-col gap-3 max-w-xs text-left">
+      <label className="text-small text-neutrals-600 mt-3 mb-1 block">eMail</label>
       <input
         type="email"
         placeholder="Email"
@@ -56,7 +56,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         className="h-12 px-4 rounded-2xl border border-accent-700"
       />
 
-      <label className="text-small text-neutrals-600 mt-8 mb-1 block">Pin</label>
+      <label className="text-small text-neutrals-600 mt-4 mb-1 block">Pin</label>
       <div className="relative">
         <input
           type={showPin ? "text" : "password"}
