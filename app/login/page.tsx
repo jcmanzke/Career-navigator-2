@@ -88,13 +88,11 @@ export default function LoginPage() {
         <div ref={headerRef} className="absolute left-0 right-0 text-center" style={{ top: headerTop }}>
           <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
         </div>
-        <div ref={cardRef} className="flex flex-col gap-3 text-left rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-5 pt-6 max-w-sm w-full">
+        <div ref={cardRef} className="flex flex-col gap-3 items-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-5 pt-6 max-w-sm w-full">
           <AuthForm mode="login" />
-          <div className="w-full mt-12 md:mt-16 lg:mt-20 flex justify-center">
-            <a href="/signup" className="text-small text-[#2C2C2C] underline">
-              Need an account? Sign up
-            </a>
-          </div>
+          <a href="/signup" className="mt-12 md:mt-16 lg:mt-20 text-center text-small text-[#2C2C2C] underline">
+            Need an account? Sign up
+          </a>
         </div>
       </div>
       {needsTap && (
