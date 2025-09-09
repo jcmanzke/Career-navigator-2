@@ -153,7 +153,12 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       setTranscribingCount((n) => n + 1);
       const fd = new FormData();
       fd.append("file", blob, "chunk.webm");
-      const res = await fetch("/api/transcribe", { method: "POST", body: fd });
+      const res = await fetch(`/api/transcribe?t=${Date.now()}` as any, {
+        method: "POST",
+        body: fd,
+        cache: "no-store",
+        keepalive: true,
+      } as RequestInit);
       const data = await res.json().catch(() => ({}));
       if (data?.text) {
         setLastTranscript(data.text);
@@ -221,14 +226,14 @@ function VoiceTextarea({ value, onChange, placeholder }) {
         setRecording(false);
         // Any remaining chunks will still be processed by processQueue
       };
-      // Request periodic chunks every 3 seconds for low latency
-      try { mr.start(3000); } catch { mr.start(); }
-      // Safari/iOS can ignore timeslice; request data manually as a fallback
+      // Start without timeslice; rely on manual requestData for broad compatibility
+      try { mr.start(); } catch {}
+      // Request data periodically for low latency and reliability (e.g., Safari)
       timerRef.current = setInterval(() => {
         try {
           if (mr.state === "recording") mr.requestData();
         } catch {}
-      }, 3000);
+      }, 2000);
       setRecording(true);
     } catch (e) {
       console.error(e);
