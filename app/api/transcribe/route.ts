@@ -26,6 +26,12 @@ export async function POST(req: Request) {
         { status: 400, headers: corsHeaders() },
       );
     }
+    if ((file as any).size === 0) {
+      return NextResponse.json(
+        { error: "Empty file" },
+        { status: 400, headers: corsHeaders() },
+      );
+    }
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const audioFile = await toFile(file, file.name, { type: file.type });
     const transcription = await client.audio.transcriptions.create({
@@ -38,9 +44,9 @@ export async function POST(req: Request) {
       { headers: corsHeaders() },
     );
   } catch (err) {
-    console.error(err);
+    console.error("/api/transcribe error", err);
     return NextResponse.json(
-      { error: "Transcription failed" },
+      { error: "Transcription failed", detail: (err as any)?.message ?? String(err) },
       { status: 500, headers: corsHeaders() },
     );
   }

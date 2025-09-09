@@ -136,11 +136,13 @@ function VoiceTextarea({ value, onChange, placeholder }) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [transcribeProgress, setTranscribeProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
   const [lastTranscript, setLastTranscript] = useState("");
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<any>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const progressTimerRef = useRef<any>(null);
   const valueRef = useRef(value);
   useEffect(() => { valueRef.current = value; }, [value]);
 
@@ -148,6 +150,19 @@ function VoiceTextarea({ value, onChange, placeholder }) {
     try {
       setTranscribing(true);
       setTranscribeProgress(0);
+      setDisplayProgress(0);
+      if (progressTimerRef.current) { clearInterval(progressTimerRef.current); }
+      // Smooth animation towards target progress (capped at 95% until done)
+      progressTimerRef.current = setInterval(() => {
+        setDisplayProgress((cur) => {
+          const target = Math.min(95, transcribeProgress);
+          if (cur < target) {
+            const delta = Math.max(1, Math.ceil((target - cur) * 0.15));
+            return Math.min(target, cur + delta);
+          }
+          return cur;
+        });
+      }, 120);
       let fullText = "";
       const total = chunksRef.current.length || 1;
       for (let i = 0; i < chunksRef.current.length; i++) {
@@ -156,12 +171,20 @@ function VoiceTextarea({ value, onChange, placeholder }) {
         const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
         const fd = new FormData();
         fd.append("file", blob, `part-${i}.${ext}`);
-        const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
-          method: "POST",
-          body: fd,
-          cache: "no-store",
-        } as RequestInit);
-        const data = await res.json().catch(() => ({}));
+        // Retry loop for transient server errors
+        let res: Response | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            res = await fetch(`/api/transcribe?t=${Date.now()}`, {
+              method: "POST",
+              body: fd,
+              cache: "no-store",
+            } as RequestInit);
+            if (res.ok) break;
+          } catch {}
+          await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        }
+        const data = await (res ? res.json().catch(() => ({})) : Promise.resolve({}));
         if (data?.text) {
           fullText += (fullText ? " " : "") + data.text;
         }
@@ -178,7 +201,10 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       console.error(e);
     } finally {
       setTranscribing(false);
-      setTranscribeProgress(0);
+      setTranscribeProgress(100);
+      setDisplayProgress(100);
+      if (progressTimerRef.current) { clearInterval(progressTimerRef.current); progressTimerRef.current = null; }
+      setTimeout(() => setDisplayProgress(100), 150);
       // reset buffer after processing
       chunksRef.current = [];
     }
@@ -275,7 +301,7 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       <div className="mb-1 flex justify-end items-center gap-2">
         {recording && <span className="text-small text-neutrals-600">Recording…</span>}
         {transcribing && (
-          <span className="text-small text-neutrals-600">Transcribing… {transcribeProgress}%</span>
+          <span className="text-small text-neutrals-600">Transcribing… {displayProgress}%</span>
         )}
         {!recording && lastTranscript && (
           <button type="button" onClick={deleteLast} className="px-2 py-1 rounded-xl border">
