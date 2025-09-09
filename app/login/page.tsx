@@ -1,36 +1,56 @@
 "use client";
 
 import Head from "next/head";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import AuthForm from "../AuthForm";
 
 export default function LoginPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [showPoster, setShowPoster] = useState(true);
+  const [needsTap, setNeedsTap] = useState(false);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     try { v.muted = true; v.defaultMuted = true; } catch {}
     // Try to start playback proactively (helps Safari/iOS)
-    const tryPlay = () => v.play().catch(() => {});
+    const tryPlay = () => v.play().then(() => setShowPoster(false)).catch(() => {});
     const onLoaded = () => tryPlay();
     const onCanPlay = () => tryPlay();
+    const onPlaying = () => setShowPoster(false);
     v.addEventListener("loadeddata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
+    v.addEventListener("playing", onPlaying);
     // Nudge playback shortly after mount as well
     const t = setTimeout(tryPlay, 100);
+    // If autoplay still hasn't started after 1s, show tap CTA
+    const tapTimer = setTimeout(() => {
+      try {
+        if (v.paused) setNeedsTap(true);
+      } catch {}
+    }, 1000);
     return () => {
       clearTimeout(t);
+      clearTimeout(tapTimer);
       v.removeEventListener("loadeddata", onLoaded);
       v.removeEventListener("canplay", onCanPlay);
+      v.removeEventListener("playing", onPlaying);
     };
   }, []);
   return (
-    <div className="relative min-h-screen bg-[url('/login-poster.png')] bg-cover bg-center">
+    <div className="relative min-h-screen">
       <Head>
         <link rel="preload" as="video" href="/852422-hd_1920_1080_24fps.mp4" />
         <link rel="preload" as="image" href="/login-poster.png" />
       </Head>
+      {/* Poster layer (visible until video plays) */}
+      <img
+        src="/login-poster.png"
+        alt=""
+        aria-hidden="true"
+        className={`fixed inset-0 z-0 h-full w-full object-cover transition-opacity duration-300 ${showPoster ? 'opacity-100' : 'opacity-0'}`}
+      />
+
       {/* Background video */}
       <video
         ref={videoRef}
@@ -40,7 +60,6 @@ export default function LoginPage() {
         loop
         playsInline
         preload="auto"
-        poster="/login-poster.png"
         src="/852422-hd_1920_1080_24fps.mp4"
         aria-hidden="true"
       />
@@ -57,6 +76,15 @@ export default function LoginPage() {
           </a>
         </div>
       </div>
+      {needsTap && (
+        <button
+          type="button"
+          onClick={() => { try { videoRef.current?.play(); setShowPoster(false); setNeedsTap(false); } catch {} }}
+          className="fixed bottom-4 right-4 z-20 px-3 py-1.5 rounded-full bg-neutrals-900/70 text-neutrals-0 text-small shadow-elevation2"
+        >
+          Tap to animate background
+        </button>
+      )}
     </div>
   );
 }
