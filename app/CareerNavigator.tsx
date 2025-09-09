@@ -146,25 +146,23 @@ function VoiceTextarea({ value, onChange, placeholder }) {
   const transcribeAll = async () => {
     try {
       setTranscribing(true);
-      let fullText = "";
-      for (const [idx, blob] of chunksRef.current.entries()) {
-        const fd = new FormData();
-        fd.append("file", blob, `part-${idx}.webm`);
-        const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
-          method: "POST",
-          body: fd,
-          cache: "no-store",
-        } as RequestInit);
-        const data = await res.json().catch(() => ({}));
-        if (data?.text) {
-          fullText += (fullText ? " " : "") + data.text;
-        }
-      }
-      if (fullText) {
-        setLastTranscript(fullText);
+      // Combine captured chunks into a single Blob to ensure proper container headers
+      const type = (chunksRef.current[0] && (chunksRef.current[0] as any).type) || "audio/webm";
+      const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
+      const combined = new Blob(chunksRef.current, { type });
+      const fd = new FormData();
+      fd.append("file", combined, `audio.${ext}`);
+      const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
+        method: "POST",
+        body: fd,
+        cache: "no-store",
+      } as RequestInit);
+      const data = await res.json().catch(() => ({}));
+      if (data?.text) {
+        setLastTranscript(data.text);
         const base = valueRef.current || "";
         const sep = base && !base.endsWith(" ") ? " " : "";
-        const next = (base + sep + fullText).trimStart();
+        const next = (base + sep + data.text).trimStart();
         onChange(next);
       }
     } catch (e) {
@@ -191,6 +189,8 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       const candidates = [
         "audio/webm;codecs=opus",
         "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
       ];
       try {
         for (const t of candidates) {
