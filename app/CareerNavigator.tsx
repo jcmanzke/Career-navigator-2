@@ -608,7 +608,7 @@ function Phase4({ journey, onNext, onBack }) {
           {loading ? "Analysiere…" : "Ergebnisse analysieren"}
         </button>
         {analysis && (
-          <ReactMarkdown className="mt-4 w-full p-2 border rounded text-small text-neutrals-700">
+          <ReactMarkdown linkTarget="_blank" className="markdown-view mt-4 w-full p-3 border rounded bg-neutrals-0">
             {analysis}
           </ReactMarkdown>
         )}

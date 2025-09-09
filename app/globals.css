@@ -14,3 +14,40 @@ body {
 h1, h2, h3, h4, h5, h6 {
   @apply font-display text-neutrals-900;
 }
+
+/* Markdown rendering (Phase 4) */
+.markdown-view {
+  @apply text-small leading-relaxed text-neutrals-700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.markdown-view p,
+.markdown-view li {
+  @apply mb-2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.markdown-view h1 { @apply text-h4 font-semibold mt-3 mb-2; }
+.markdown-view h2 { @apply text-h5 font-semibold mt-3 mb-2; }
+.markdown-view h3 { @apply text-h6 font-semibold mt-2 mb-1; }
+.markdown-view h4 { @apply font-semibold mt-2 mb-1; }
+
+.markdown-view ul { @apply list-disc pl-6 my-2; }
+.markdown-view ol { @apply list-decimal pl-6 my-2; }
+.markdown-view blockquote { @apply border-l-4 border-accent-700 pl-3 text-neutrals-600 my-3; }
+
+.markdown-view a { @apply text-primary-500 underline; }
+
+.markdown-view pre {
+  @apply bg-neutrals-50 border border-accent-700 rounded p-3 my-3 text-mono;
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.markdown-view code {
+  @apply bg-neutrals-100 rounded px-1 py-0.5;
+  white-space: break-spaces;
+}
+
+.markdown-view table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+.markdown-view th, .markdown-view td { @apply border border-accent-700 px-2 py-1; word-break: break-word; }
