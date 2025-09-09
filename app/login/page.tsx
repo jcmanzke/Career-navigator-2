@@ -1,10 +1,31 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import AuthForm from "../AuthForm";
 
 export default function LoginPage() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    try { v.muted = true; } catch {}
+    // Try to start playback proactively (helps Safari/iOS)
+    const tryPlay = () => v.play().catch(() => {});
+    const onLoaded = () => tryPlay();
+    v.addEventListener("loadeddata", onLoaded);
+    // Nudge playback shortly after mount as well
+    const t = setTimeout(tryPlay, 100);
+    return () => {
+      clearTimeout(t);
+      v.removeEventListener("loadeddata", onLoaded);
+    };
+  }, []);
   return (
     <div className="relative min-h-screen">
       {/* Background video */}
       <video
+        ref={videoRef}
         className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden block"
         autoPlay
         muted
