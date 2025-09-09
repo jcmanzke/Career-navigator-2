@@ -34,7 +34,8 @@ export default function Sidebar() {
 
   const logout = async () => {
     try { await supabase.auth.signOut(); } catch {}
-    router.push("/login");
+    // Hard navigation to avoid shell/sidebar flicker
+    if (typeof window !== 'undefined') window.location.replace('/login');
   };
 
   const itemBase =

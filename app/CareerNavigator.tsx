@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/utils/supabase/client";
 
@@ -331,7 +332,8 @@ function Shell({ step, setStep, saveState, children }) {
   return (
     <div className="min-h-screen text-neutrals-900">
       <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700 h-12 flex items-center">
-        <div className="max-w-5xl mx-auto px-4 w-full flex justify-end">
+        <div className="max-w-5xl mx-auto px-4 w-full flex items-center justify-between">
+          <BackInHeader />
           <SaveIndicator state={saveState} />
         </div>
       </header>
@@ -340,6 +342,21 @@ function Shell({ step, setStep, saveState, children }) {
         {children}
       </main>
     </div>
+  );
+}
+
+function BackInHeader() {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => router.back()}
+      className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-small text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
+      aria-label="Go back"
+    >
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 7l-5 5 5 5V7z"/></svg>
+      Back
+    </button>
   );
 }
 
