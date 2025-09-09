@@ -134,51 +134,76 @@ function DraggableList({ items, setItems, render, itemKey }) {
 // --- Voice-enabled textarea -------------------------------------------------
 function VoiceTextarea({ value, onChange, placeholder }) {
   const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
+  const [transcribingCount, setTranscribingCount] = useState(0);
   const [lastTranscript, setLastTranscript] = useState("");
-  const mediaRef = useRef(null);
-  const chunksRef = useRef([]);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const queueRef = useRef<Blob[]>([]);
+  const sendingRef = useRef(false);
 
-  const toggle = async () => {
-    if (recording) {
-      mediaRef.current?.stop();
-      return;
-    }
+  const processQueue = async () => {
+    if (sendingRef.current) return;
+    const blob = queueRef.current.shift();
+    if (!blob) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      mediaRef.current = mr;
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => chunksRef.current.push(e.data);
-      mr.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        send(blob);
-      };
-      mr.start();
-      setRecording(true);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const send = async (blob) => {
-    setRecording(false);
-    setTranscribing(true);
-    const fd = new FormData();
-    fd.append("file", blob, "audio.webm");
-    try {
+      sendingRef.current = true;
+      setTranscribingCount((n) => n + 1);
+      const fd = new FormData();
+      fd.append("file", blob, "chunk.webm");
       const res = await fetch("/api/transcribe", { method: "POST", body: fd });
-      const data = await res.json();
-      if (data.text) {
+      const data = await res.json().catch(() => ({}));
+      if (data?.text) {
         setLastTranscript(data.text);
         const next = value ? value + " " + data.text : data.text;
         onChange(next);
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setTranscribingCount((n) => Math.max(0, n - 1));
+      sendingRef.current = false;
+      // Continue with next chunk if available
+      if (queueRef.current.length > 0) {
+        // Yield to event loop to keep UI responsive
+        setTimeout(processQueue, 0);
+      }
     }
-    setTranscribing(false);
+  };
+
+  const toggle = async () => {
+    if (recording) {
+      try {
+        mediaRef.current?.stop();
+      } catch {}
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mr = new MediaRecorder(stream);
+      mediaRef.current = mr;
+      queueRef.current = [];
+      sendingRef.current = false;
+
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          queueRef.current.push(e.data);
+          // Start processing if idle
+          processQueue();
+        }
+      };
+      mr.onstop = () => {
+        // Stop the microphone
+        try { stream.getTracks().forEach((t) => t.stop()); } catch {}
+        setRecording(false);
+        // Any remaining chunks will still be processed by processQueue
+      };
+      // Request periodic chunks every 4 seconds for low latency
+      mr.start(4000);
+      setRecording(true);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const deleteLast = () => {
@@ -194,7 +219,9 @@ function VoiceTextarea({ value, onChange, placeholder }) {
     <div>
       <div className="mb-1 flex justify-end items-center gap-2">
         {recording && <span className="text-small text-neutrals-600">Recording…</span>}
-        {transcribing && <span className="text-small text-neutrals-600">Transcribing…</span>}
+        {transcribingCount > 0 && (
+          <span className="text-small text-neutrals-600">Transcribing… ({transcribingCount})</span>
+        )}
         {!recording && lastTranscript && (
           <button type="button" onClick={deleteLast} className="px-2 py-1 rounded-xl border">
             Delete last
