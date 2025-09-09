@@ -102,7 +102,10 @@ export default function Page() {
         <div className="fixed inset-0 z-0 bg-neutrals-900/20 backdrop-blur-[1px]" aria-hidden="true" />
         {/* Foreground content */}
         <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
-          <div className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6">
+          <div className="absolute top-10 left-0 right-0 text-center">
+            <h1 className="font-display text-h3 md:text-h2 font-bold text-white">Career Navigator</h1>
+          </div>
+          <div className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
             <AuthForm mode={authMode} />
             <button
               onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
