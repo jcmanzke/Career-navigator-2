@@ -88,9 +88,9 @@ export default function LoginPage() {
         <div ref={headerRef} className="absolute left-0 right-0 text-center" style={{ top: headerTop }}>
           <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
         </div>
-        <div ref={cardRef} className="flex flex-col gap-3 items-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-5 pt-6 max-w-sm w-full">
+        <div ref={cardRef} className="flex flex-col gap-4 items-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7 max-w-sm w-full">
           <AuthForm mode="login" />
-          <a href="/signup" className="mt-12 md:mt-16 lg:mt-20 text-center text-small text-[#2C2C2C] underline">
+          <a href="/signup" className="mt-10 text-center text-small text-[#2C2C2C] underline">
             Need an account? Sign up
           </a>
         </div>
