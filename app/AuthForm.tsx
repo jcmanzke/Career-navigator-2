@@ -37,7 +37,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       if (error) {
         setError(error.message);
       } else {
-        router.push("/");
+        router.push("/start");
       }
     } catch (e) {
       setError((e as Error).message);
