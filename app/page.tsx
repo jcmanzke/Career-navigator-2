@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import CareerNavigatorLoader from "../CareerNavigatorLoader";
-import AuthForm from "../AuthForm";
+import CareerNavigatorLoader from "./CareerNavigatorLoader";
+import AuthForm from "./AuthForm";
 import { createClient } from "@/utils/supabase/client";
+import Sidebar from "@/app/components/Sidebar";
 
 export default function Page() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -39,8 +40,7 @@ export default function Page() {
     return unsubscribe;
   }, []);
 
-  // Important: place hooks before any early returns to keep hook order stable
-  // Setup background video autoplay assistance for the unauthenticated view
+  // Login view helpers ------------------------------------------------------
   useEffect(() => {
     // Only attempt when not loading and user is logged out
     if (loading || session) return;
@@ -69,7 +69,7 @@ export default function Page() {
 
   // Position header vertically centered between screen top and card top
   useEffect(() => {
-    if (loading) return;
+    if (loading || session) return;
     const reposition = () => {
       const card = cardRef.current;
       const header = headerRef.current;
@@ -84,7 +84,7 @@ export default function Page() {
     window.addEventListener("resize", reposition);
     const t = setInterval(reposition, 300);
     return () => { window.removeEventListener("resize", reposition); clearInterval(t); };
-  }, [loading]);
+  }, [loading, session]);
 
   if (loading) return null;
 
@@ -96,18 +96,16 @@ export default function Page() {
     );
   }
 
-
+  // Unauthenticated: dedicated login screen with no sidebar
   if (!session) {
     return (
       <div className="relative min-h-screen">
-        {/* Poster layer (visible until video plays) */}
         <img
           src="/login-poster.png"
           alt=""
           aria-hidden="true"
           className={`fixed inset-0 z-0 h-full w-full object-cover transition-opacity duration-300 ${showPoster ? 'opacity-100' : 'opacity-0'}`}
         />
-        {/* Background video */}
         <video
           ref={videoRef}
           className="pointer-events-none fixed inset-0 z-0 h-full w-full object-cover motion-reduce:hidden block"
@@ -119,9 +117,7 @@ export default function Page() {
           src="/852422-hd_1920_1080_24fps.mp4"
           aria-hidden="true"
         />
-        {/* Overlay */}
         <div className="fixed inset-0 z-0 bg-neutrals-900/20 backdrop-blur-[1px]" aria-hidden="true" />
-        {/* Foreground content */}
         <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
           <div ref={headerRef} className="absolute left-0 right-0 text-center">
             <h1 className="font-display font-bold text-white text-[48px] md:text-[72px] lg:text-[88px]">Career Navigator</h1>
@@ -149,5 +145,14 @@ export default function Page() {
     );
   }
 
-  return <CareerNavigatorLoader />;
+  // Authenticated: render with sidebar
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex-1 min-w-0">
+        <CareerNavigatorLoader />
+      </div>
+    </div>
+  );
 }
+
