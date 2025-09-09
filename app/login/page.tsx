@@ -65,7 +65,7 @@ export default function LoginPage() {
       {/* Foreground content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="absolute top-10 left-0 right-0 text-center">
-          <h1 className="font-display text-h3 md:text-h2 font-bold text-white">Career Navigator</h1>
+          <h1 className="font-display font-bold text-white text-[40px] md:text-[64px] lg:text-[72px]">Career Navigator</h1>
         </div>
         <div className="space-y-4 text-center rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-6 pt-7">
           <AuthForm mode="login" />
