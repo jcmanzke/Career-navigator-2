@@ -5,7 +5,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen">
       {/* Background video */}
       <video
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden hidden md:block"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden block"
         autoPlay
         muted
         loop
@@ -16,7 +16,7 @@ export default function LoginPage() {
       />
 
       {/* Contrast overlay */}
-      <div className="absolute inset-0 bg-neutrals-900/20 backdrop-blur-[1px] hidden md:block" aria-hidden="true" />
+      <div className="absolute inset-0 bg-neutrals-900/20 backdrop-blur-[1px]" aria-hidden="true" />
 
       {/* Foreground content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
