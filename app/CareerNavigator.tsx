@@ -138,8 +138,11 @@ function VoiceTextarea({ value, onChange, placeholder }) {
   const [lastTranscript, setLastTranscript] = useState("");
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<any>(null);
   const queueRef = useRef<Blob[]>([]);
   const sendingRef = useRef(false);
+  const valueRef = useRef(value);
+  useEffect(() => { valueRef.current = value; }, [value]);
 
   const processQueue = async () => {
     if (sendingRef.current) return;
@@ -154,7 +157,9 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       const data = await res.json().catch(() => ({}));
       if (data?.text) {
         setLastTranscript(data.text);
-        const next = value ? value + " " + data.text : data.text;
+        const base = valueRef.current || "";
+        const sep = base && !base.endsWith(" ") ? " " : "";
+        const next = (base + sep + data.text).trimStart();
         onChange(next);
       }
     } catch (e) {
@@ -180,7 +185,24 @@ function VoiceTextarea({ value, onChange, placeholder }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const mr = new MediaRecorder(stream);
+      // Pick a supported mimeType to ensure periodic chunks across browsers
+      let options: MediaRecorderOptions | undefined = undefined;
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/mpeg",
+      ];
+      try {
+        for (const t of candidates) {
+          // @ts-ignore: isTypeSupported may not exist in some environments
+          if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.(t)) {
+            options = { mimeType: t };
+            break;
+          }
+        }
+      } catch {}
+      const mr = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
       mediaRef.current = mr;
       queueRef.current = [];
       sendingRef.current = false;
@@ -195,11 +217,18 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       mr.onstop = () => {
         // Stop the microphone
         try { stream.getTracks().forEach((t) => t.stop()); } catch {}
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
         setRecording(false);
         // Any remaining chunks will still be processed by processQueue
       };
-      // Request periodic chunks every 4 seconds for low latency
-      mr.start(4000);
+      // Request periodic chunks every 3 seconds for low latency
+      try { mr.start(3000); } catch { mr.start(); }
+      // Safari/iOS can ignore timeslice; request data manually as a fallback
+      timerRef.current = setInterval(() => {
+        try {
+          if (mr.state === "recording") mr.requestData();
+        } catch {}
+      }, 3000);
       setRecording(true);
     } catch (e) {
       console.error(e);
