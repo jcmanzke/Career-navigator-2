@@ -53,7 +53,7 @@ export function clearProgress(storage: StorageLike | null = getDefaultStorage())
 }
 
 export function getResumeUrl(p: Progress): string {
-  const base = p.track === "fast" ? "/start/fast" : "/start/deep";
+  const base = p.track === "fast" ? "/start/fast" : "/"; // deep goes to main exercise
   const q = p.stepId ? `?step=${encodeURIComponent(p.stepId)}` : "";
   return `${base}${q}`;
 }
@@ -65,4 +65,3 @@ export class MemoryStorage implements StorageLike {
   setItem(key: string, val: string): void { this.map.set(key, val); }
   removeItem(key: string): void { this.map.delete(key); }
 }
-

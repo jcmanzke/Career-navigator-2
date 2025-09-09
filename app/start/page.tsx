@@ -3,15 +3,32 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getProgress, getResumeUrl, type Progress } from "@/lib/progress";
+import { createClient } from "@/utils/supabase/client";
 
 export default function StartPage() {
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [hasServerProgress, setHasServerProgress] = useState<boolean>(false);
   useEffect(() => { setProgress(getProgress()); }, []);
+  useEffect(() => {
+    // Check Supabase for any saved journeys for this user
+    const check = async () => {
+      try {
+        const supabase = createClient();
+        // count only, head request; RLS restricts to current user
+        const { count, error } = await supabase
+          .from("journeys")
+          .select("id", { count: "exact", head: true });
+        if (error) return;
+        setHasServerProgress(!!(count && count > 0));
+      } catch {}
+    };
+    check();
+  }, []);
 
   return (
     <main className="min-h-screen px-4 py-8 md:py-12">
       {/* Hero */}
-      <section className="mx-auto max-w-4xl text-center">
+      <section className="mx-auto max-w-5xl text-center">
         <h1 className="font-display text-neutrals-900 text-[28px] md:text-[40px] font-semibold">
           Find your next step, your way.
         </h1>
@@ -21,10 +38,10 @@ export default function StartPage() {
       </section>
 
       {/* Continue tile */}
-      {progress && (
-        <section className="mx-auto mt-8 max-w-4xl">
+      {hasServerProgress && (
+        <section className="mx-auto mt-8 max-w-5xl">
           <Link
-            href={getResumeUrl(progress)}
+            href={progress ? getResumeUrl(progress) : "/"}
             className="group block rounded-3xl border border-accent-700 bg-neutrals-0/80 p-4 md:p-5 shadow-elevation2 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/40"
             aria-label="Continue your journey"
           >
@@ -33,21 +50,16 @@ export default function StartPage() {
                 <h2 className="font-semibold text-neutrals-900">Continue your journey</h2>
                 <p className="text-small text-neutrals-600">Resume</p>
               </div>
-              <span className="text-small text-neutrals-600">Last step: {progress.stepId}</span>
+              {progress && <span className="text-small text-neutrals-600">Last step: {progress.stepId}</span>}
             </div>
           </Link>
         </section>
       )}
 
       {/* Track cards */}
-      <section className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Fast Track Card */}
-        <Link
-          href="/start/fast"
-          className="group relative rounded-3xl bg-neutrals-100 p-5 md:p-6 border border-accent-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/40"
-          aria-label="Start Fast Track"
-        >
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-neutrals-0/0 to-neutrals-0/0 pointer-events-none" />
+      <section className="mx-auto mt-8 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Fast Track Card (container not clickable) */}
+        <div className="relative rounded-3xl bg-neutrals-100 p-6 md:p-8 border border-accent-700 focus-within:ring-4 focus-within:ring-primary-500/40 min-h-80 flex flex-col">
           <div className="flex items-start justify-between">
             <h3 className="font-semibold text-neutrals-900 text-[20px]">Fast Track</h3>
             <span className="rounded-full bg-neutrals-200 px-3 py-1 text-small text-neutrals-800" aria-label="Estimated time 10 to 15 minutes">10–15 min</span>
@@ -57,21 +69,20 @@ export default function StartPage() {
             <li>2 skills to build next</li>
             <li>1 action you can take today</li>
           </ul>
-          <div className="mt-5 flex items-center justify-between">
-            <span className="text-xs text-neutrals-600">Your data is private. You control what’s saved.</span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60">
+          <div className="mt-auto pt-4">
+            <Link
+              href="/start/fast"
+              aria-label="Start Fast Track"
+              className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+            >
               Start Fast Track
-            </span>
+            </Link>
+            <p className="mt-3 text-xs text-neutrals-600">Your data is private. You control what’s saved.</p>
           </div>
-        </Link>
+        </div>
 
-        {/* Deep Analysis Card */}
-        <Link
-          href="/start/deep"
-          className="group relative rounded-3xl bg-neutrals-100 p-5 md:p-6 border border-accent-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/40"
-          aria-label="Start Deep Analysis"
-        >
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-neutrals-0/0 to-neutrals-0/0 pointer-events-none" />
+        {/* Deep Analysis Card (container not clickable) */}
+        <div className="relative rounded-3xl bg-neutrals-100 p-6 md:p-8 border border-accent-700 focus-within:ring-4 focus-within:ring-primary-500/40 min-h-80 flex flex-col">
           <div className="flex items-start justify-between">
             <h3 className="font-semibold text-neutrals-900 text-[20px]">Deep Analysis</h3>
             <span className="rounded-full bg-neutrals-200 px-3 py-1 text-small text-neutrals-800" aria-label="Estimated time 45 to 60 minutes">45–60 min</span>
@@ -81,26 +92,18 @@ export default function StartPage() {
             <li>Personalized role paths</li>
             <li>Development plan (in/outside company, freelance)</li>
           </ul>
-          <div className="mt-5 flex items-center justify-between">
-            <span className="text-xs text-neutrals-600">Your data is private. You control what’s saved.</span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60">
+          <div className="mt-auto pt-4">
+            <Link
+              href="/"
+              aria-label="Start Deep Analysis"
+              className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+            >
               Start Deep Analysis
-            </span>
+            </Link>
+            <p className="mt-3 text-xs text-neutrals-600">Your data is private. You control what’s saved.</p>
           </div>
-        </Link>
-      </section>
-
-      {/* Social proof strip */}
-      <section className="mx-auto mt-10 max-w-4xl" aria-label="Social proof">
-        <div className="flex flex-wrap items-center justify-center gap-6 text-neutrals-600 text-small">
-          <span>Trusted by professionals at</span>
-          <span className="rounded bg-neutrals-100 px-3 py-1">Acme Co</span>
-          <span className="rounded bg-neutrals-100 px-3 py-1">Globex</span>
-          <span className="rounded bg-neutrals-100 px-3 py-1">Initech</span>
-          <span className="rounded bg-neutrals-100 px-3 py-1">Umbrella</span>
         </div>
       </section>
     </main>
   );
 }
-
