@@ -177,8 +177,30 @@ function VoiceTextarea({ value, onChange, placeholder }) {
   const toggle = async () => {
     if (recording) {
       try {
-        try { mediaRef.current?.requestData?.(); } catch {}
-        mediaRef.current?.stop();
+        // Proactively flush the last buffered audio chunk before stopping
+        const mr = mediaRef.current;
+        if (timerRef.current) { try { clearInterval(timerRef.current); } catch {} ; timerRef.current = null; }
+        if (mr) {
+          await new Promise<void>((resolve) => {
+            let settled = false;
+            const handler = () => {
+              if (settled) return;
+              settled = true;
+              try { mr.removeEventListener('dataavailable', handler as any); } catch {}
+              resolve();
+            };
+            try { mr.addEventListener('dataavailable', handler as any, { once: true } as any); } catch {}
+            try { (mr as any).requestData?.(); } catch {}
+            // Fallback timeout in case no event fires
+            setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              try { mr.removeEventListener('dataavailable', handler as any); } catch {}
+              resolve();
+            }, 300);
+          });
+          try { mr.stop(); } catch {}
+        }
       } catch {}
       return;
     }
@@ -214,8 +236,8 @@ function VoiceTextarea({ value, onChange, placeholder }) {
         try { stream.getTracks().forEach((t) => t.stop()); } catch {}
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
         setRecording(false);
-        // Transcribe all captured chunks now
-        transcribeAll();
+        // Transcribe all captured chunks now (slight delay to ensure final dataavailable processed)
+        setTimeout(() => { transcribeAll(); }, 100);
       };
       // Ask for periodic small chunks to keep memory reasonable
       try { mr.start(5000); } catch { try { mr.start(); } catch {} }
