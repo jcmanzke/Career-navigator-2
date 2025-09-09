@@ -154,7 +154,6 @@ function VoiceTextarea({ value, onChange, placeholder }) {
           method: "POST",
           body: fd,
           cache: "no-store",
-          keepalive: true,
         } as RequestInit);
         const data = await res.json().catch(() => ({}));
         if (data?.text) {
