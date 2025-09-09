@@ -152,49 +152,46 @@ function VoiceTextarea({ value, onChange, placeholder }) {
       setTranscribeProgress(0);
       setDisplayProgress(0);
       if (progressTimerRef.current) { clearInterval(progressTimerRef.current); }
-      // Smooth animation towards target progress (capped at 95% until done)
+      // Simulate smooth progress up to 95% while uploading/transcribing
       progressTimerRef.current = setInterval(() => {
         setDisplayProgress((cur) => {
-          const target = Math.min(95, transcribeProgress);
+          const target = 95;
           if (cur < target) {
-            const delta = Math.max(1, Math.ceil((target - cur) * 0.15));
+            const delta = cur < 60 ? 2 : 1; // faster early, slower later
             return Math.min(target, cur + delta);
           }
           return cur;
         });
       }, 120);
-      let fullText = "";
-      const total = chunksRef.current.length || 1;
-      for (let i = 0; i < chunksRef.current.length; i++) {
-        const blob = chunksRef.current[i];
-        const type = ((blob as any).type as string) || "audio/webm";
-        const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
-        const fd = new FormData();
-        fd.append("file", blob, `part-${i}.${ext}`);
-        // Retry loop for transient server errors
-        let res: Response | null = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            res = await fetch(`/api/transcribe?t=${Date.now()}`, {
-              method: "POST",
-              body: fd,
-              cache: "no-store",
-            } as RequestInit);
-            if (res.ok) break;
-          } catch {}
-          await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
-        }
-        const data = await (res ? res.json().catch(() => ({})) : Promise.resolve({}));
-        if (data?.text) {
-          fullText += (fullText ? " " : "") + data.text;
-        }
-        setTranscribeProgress(Math.round(((i + 1) / total) * 100));
+
+      // Combine all chunks into a single Blob to preserve proper container headers
+      const firstType = (chunksRef.current[0] && (chunksRef.current[0] as any).type) || "audio/webm";
+      const type = firstType || "audio/webm";
+      const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
+      const combined = new Blob(chunksRef.current, { type });
+
+      // Retry the single request up to 2 times on failure
+      let data: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const fd = new FormData();
+          fd.append("file", combined, `audio.${ext}`);
+          const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
+            method: "POST",
+            body: fd,
+            cache: "no-store",
+          } as RequestInit);
+          data = await res.json().catch(() => ({}));
+          if (res.ok && data) break;
+        } catch {}
+        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
       }
-      if (fullText) {
-        setLastTranscript(fullText);
+
+      if (data?.text) {
+        setLastTranscript(data.text);
         const base = valueRef.current || "";
         const sep = base && !base.endsWith(" ") ? " " : "";
-        const next = (base + sep + fullText).trimStart();
+        const next = (base + sep + data.text).trimStart();
         onChange(next);
       }
     } catch (e) {
