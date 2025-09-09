@@ -1,5 +1,6 @@
 "use client";
 
+import Head from "next/head";
 import { useEffect, useRef } from "react";
 import AuthForm from "../AuthForm";
 
@@ -25,7 +26,10 @@ export default function LoginPage() {
     };
   }, []);
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen bg-[url('/login-poster.jpg')] bg-cover bg-center">
+      <Head>
+        <link rel="preload" as="video" href="/852422-hd_1920_1080_24fps.mp4" />
+      </Head>
       {/* Background video */}
       <video
         ref={videoRef}
@@ -35,6 +39,7 @@ export default function LoginPage() {
         loop
         playsInline
         preload="auto"
+        poster="/login-poster.jpg"
         src="/852422-hd_1920_1080_24fps.mp4"
         aria-hidden="true"
       />
