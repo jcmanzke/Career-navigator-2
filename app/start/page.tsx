@@ -37,25 +37,6 @@ export default function StartPage() {
         </p>
       </section>
 
-      {/* Continue tile */}
-      {hasServerProgress && (
-        <section className="mx-auto mt-8 max-w-5xl">
-          <Link
-            href={progress ? getResumeUrl(progress) : "/"}
-            className="group block rounded-3xl border border-accent-700 bg-neutrals-0/80 p-4 md:p-5 shadow-elevation2 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/40"
-            aria-label="Continue your journey"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-neutrals-900">Continue your journey</h2>
-                <p className="text-small text-neutrals-600">Resume</p>
-              </div>
-              {progress && <span className="text-small text-neutrals-600">Last step: {progress.stepId}</span>}
-            </div>
-          </Link>
-        </section>
-      )}
-
       {/* Track cards */}
       <section className="mx-auto mt-8 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
         {/* Fast Track Card (container not clickable) */}
@@ -94,12 +75,22 @@ export default function StartPage() {
           </ul>
           <div className="mt-auto pt-4">
             <Link
-              href="/"
+              href={hasServerProgress ? "#" : "/"}
               aria-label="Start Deep Analysis"
-              className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+              className={`w-full inline-flex justify-center items-center gap-2 rounded-full px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60 ${hasServerProgress ? 'bg-neutrals-200 text-neutrals-600 line-through cursor-not-allowed' : 'bg-primary-500 text-[#2C2C2C]'}`}
+              tabIndex={hasServerProgress ? -1 : 0}
             >
               Start Deep Analysis
             </Link>
+            {hasServerProgress && (
+              <Link
+                href={progress ? getResumeUrl(progress) : "/"}
+                aria-label="Continue Deep Analysis"
+                className="mt-3 w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+              >
+                Continue Deep Analysis
+              </Link>
+            )}
             <p className="mt-3 text-xs text-neutrals-600">Your data is private. You control what’s saved.</p>
           </div>
         </div>

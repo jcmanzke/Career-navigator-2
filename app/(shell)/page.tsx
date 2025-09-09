@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import CareerNavigatorLoader from "./CareerNavigatorLoader";
-import AuthForm from "./AuthForm";
+import CareerNavigatorLoader from "../CareerNavigatorLoader";
+import AuthForm from "../AuthForm";
 import { createClient } from "@/utils/supabase/client";
 
 export default function Page() {

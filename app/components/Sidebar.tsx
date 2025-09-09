@@ -34,7 +34,7 @@ export default function Sidebar() {
   };
 
   const itemBase =
-    "flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+    "w-full flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
   return (
     <aside className={`${collapsed ? "w-16" : "w-60"} shrink-0 border-r border-accent-700 bg-neutrals-50/70 backdrop-blur-md px-2 py-3 flex flex-col min-h-screen`}
@@ -88,4 +88,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-
