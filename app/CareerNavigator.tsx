@@ -183,6 +183,8 @@ function VoiceTextarea({ value, onChange, placeholder }) {
   const toggle = async () => {
     if (recording) {
       try {
+        // Flush any buffered data before stopping
+        try { mediaRef.current?.requestData?.(); } catch {}
         mediaRef.current?.stop();
       } catch {}
       return;
@@ -225,14 +227,21 @@ function VoiceTextarea({ value, onChange, placeholder }) {
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
         setRecording(false);
         // Any remaining chunks will still be processed by processQueue
+        if (queueRef.current.length > 0) {
+          setTimeout(processQueue, 0);
+        }
       };
-      // Start without timeslice; rely on manual requestData for broad compatibility
-      try { mr.start(); } catch {}
-      // Request data periodically for low latency and reliability (e.g., Safari)
+      // Use a 5s timeslice when supported for chunk boundaries
+      try { mr.start(5000); } catch { try { mr.start(); } catch {} }
+      // Also manually request data every 5s for browsers that ignore the timeslice
       timerRef.current = setInterval(() => {
         try {
           if (mr.state === "recording") mr.requestData();
         } catch {}
+      }, 5000);
+      // Kick off an early flush to ensure the first chunk arrives
+      setTimeout(() => {
+        try { if (mr.state === "recording") mr.requestData(); } catch {}
       }, 2000);
       setRecording(true);
     } catch (e) {
