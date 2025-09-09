@@ -90,8 +90,8 @@ export default function LoginPage() {
         </div>
         <div ref={cardRef} className="flex flex-col gap-3 text-left rounded-3xl border border-accent-700 bg-neutrals-0/80 backdrop-blur-md p-5 pt-6 max-w-sm w-full">
           <AuthForm mode="login" />
-          <div className="mx-auto w-full max-w-xs mt-auto">
-            <a href="/signup" className="block text-center text-small text-[#2C2C2C] underline">
+          <div className="w-full mt-12 md:mt-16 lg:mt-20 flex justify-center">
+            <a href="/signup" className="text-small text-[#2C2C2C] underline">
               Need an account? Sign up
             </a>
           </div>
