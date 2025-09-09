@@ -11,6 +11,8 @@ export default function StartLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen">
       <Sidebar />
       <div className="flex-1 min-w-0">
+        {/* Top white banner */}
+        <div className="sticky top-0 z-20 backdrop-blur bg-neutrals-0/70 border-b border-accent-700 h-12" />
         {showBack && (
           <div className="px-4 pt-3">
             <button

@@ -14,6 +14,7 @@ const Icon = ({ path, label }: { path: string; label: string }) => (
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +28,9 @@ export default function Sidebar() {
   }, [collapsed]);
 
   const supabase = createClient();
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null)).catch(() => {});
+  }, []);
 
   const logout = async () => {
     try { await supabase.auth.signOut(); } catch {}
@@ -46,7 +50,7 @@ export default function Sidebar() {
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={!collapsed}
-          className="rounded-full p-2 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
+          className="rounded-full p-2 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 text-neutrals-900"
         >
           <Icon label="Toggle" path="M4 12h16M4 6h16M4 18h16" />
         </button>
@@ -75,6 +79,9 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto px-1">
+        {!collapsed && email && (
+          <div className="mb-2 px-3 py-1 text-small text-neutrals-600 truncate" aria-label="User email">{email}</div>
+        )}
         <button
           type="button"
           onClick={logout}

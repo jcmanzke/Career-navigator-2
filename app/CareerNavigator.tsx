@@ -327,43 +327,12 @@ function VoiceTextarea({ value, onChange, placeholder }) {
 
 // --- Shell -----------------------------------------------------------------
 function Shell({ step, setStep, saveState, children }) {
-  const [email, setEmail] = useState<string | null>(null);
-  useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabase.auth
-        .getUser()
-        .then(({ data: { user } }) => setEmail(user?.email ?? null));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-  const handleLogout = async () => {
-    try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      window.location.href = "/login";
-    } catch (e) {
-      console.error(e);
-    }
-  };
-  const stepToPhase = (s) => `Phase ${s}`;
+  // Top header content (logo/title) removed per requirements; logout/email handled in sidebar
   return (
     <div className="min-h-screen text-neutrals-900">
-      <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-2xl bg-primary-500 text-neutrals-0 flex items-center justify-center font-bold">CN</div>
-            <div>
-              <div className="font-display text-h6">Career Navigator – MVP</div>
-              <div className="text-small text-neutrals-500">{step === 0 ? "Onboarding" : `Schritt ${step} • ${stepToPhase(step)}`}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {email && <span className="text-small text-neutrals-600">{email}</span>}
-            {email && <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl border">Logout</button>}
-            <SaveIndicator state={saveState} />
-          </div>
+      <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700 h-12 flex items-center">
+        <div className="max-w-5xl mx-auto px-4 w-full flex justify-end">
+          <SaveIndicator state={saveState} />
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
