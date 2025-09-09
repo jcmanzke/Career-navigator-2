@@ -1,6 +1,5 @@
 "use client";
 
-import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
 import AuthForm from "../AuthForm";
 
@@ -39,10 +38,6 @@ export default function LoginPage() {
   }, []);
   return (
     <div className="relative min-h-screen">
-      <Head>
-        <link rel="preload" as="video" href="/852422-hd_1920_1080_24fps.mp4" />
-        <link rel="preload" as="image" href="/login-poster.png" />
-      </Head>
       {/* Poster layer (visible until video plays) */}
       <img
         src="/login-poster.png"
