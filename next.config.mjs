@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: { typedRoutes: false },
+  typedRoutes: false,
   typescript: { ignoreBuildErrors: true }
 };
 export default nextConfig;

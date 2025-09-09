@@ -45,7 +45,7 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 100%;
 }
 .markdown-view code {
-  @apply bg-neutrals-100 rounded px-1 py-0.5;
+  @apply bg-neutrals-0 rounded px-1 py-0.5;
   white-space: break-spaces;
 }
 
