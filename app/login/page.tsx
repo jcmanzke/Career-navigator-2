@@ -9,16 +9,19 @@ export default function LoginPage() {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    try { v.muted = true; } catch {}
+    try { v.muted = true; v.defaultMuted = true; } catch {}
     // Try to start playback proactively (helps Safari/iOS)
     const tryPlay = () => v.play().catch(() => {});
     const onLoaded = () => tryPlay();
+    const onCanPlay = () => tryPlay();
     v.addEventListener("loadeddata", onLoaded);
+    v.addEventListener("canplay", onCanPlay);
     // Nudge playback shortly after mount as well
     const t = setTimeout(tryPlay, 100);
     return () => {
       clearTimeout(t);
       v.removeEventListener("loadeddata", onLoaded);
+      v.removeEventListener("canplay", onCanPlay);
     };
   }, []);
   return (
@@ -26,18 +29,18 @@ export default function LoginPage() {
       {/* Background video */}
       <video
         ref={videoRef}
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden block"
+        className="pointer-events-none fixed inset-0 z-0 h-full w-full object-cover motion-reduce:hidden block"
         autoPlay
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
         src="/852422-hd_1920_1080_24fps.mp4"
         aria-hidden="true"
       />
 
       {/* Contrast overlay */}
-      <div className="absolute inset-0 bg-neutrals-900/20 backdrop-blur-[1px]" aria-hidden="true" />
+      <div className="fixed inset-0 z-0 bg-neutrals-900/20 backdrop-blur-[1px]" aria-hidden="true" />
 
       {/* Foreground content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
