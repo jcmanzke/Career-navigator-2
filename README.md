@@ -55,3 +55,15 @@ If you see an error, confirm the URL and key match the values from your Supabase
 ## Deploy
 
 You can push this folder to GitHub and import the repo in Vercel.
+
+## Install as an iOS app (PWA)
+
+This project ships with a minimal PWA setup so it can run full‑screen when added to the Home Screen on iPhone.
+
+- Open the site in Safari on iOS.
+- Tap the Share button → Add to Home Screen.
+- Launch from the new icon; it opens in standalone mode (no browser chrome).
+
+Notes:
+- We include a `manifest.webmanifest` and a minimal service worker. For a polished icon, add `public/apple-touch-icon.png` (180×180 PNG) and larger PNGs (192px/512px) in `public/` and update the manifest/icons if needed.
+- iOS ignores the manifest for install prompts; users must use Add to Home Screen. The app will still launch full‑screen thanks to the Apple meta tags configured in `app/layout.tsx`.

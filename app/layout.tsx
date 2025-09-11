@@ -7,6 +7,18 @@ export const metadata: Metadata = {
   viewport: {
     width: "device-width",
     initialScale: 1,
+    viewportFit: "cover",
+  },
+  themeColor: "#ffffff",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Career Navigator",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
 };
 

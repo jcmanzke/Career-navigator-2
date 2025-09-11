@@ -78,8 +78,8 @@ export default function Sidebar() {
         role="navigation"
       >
         <div className="flex items-center justify-between px-1">
-          {/* Title only when expanded (desktop) */}
-          <span className="hidden md:inline font-semibold text-neutrals-900">Menu</span>
+          {/* Title */}
+          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline font-semibold text-neutrals-900`}>Menu</span>
           {/* Collapse toggle (desktop) and Close (mobile) */}
           <div className="flex items-center gap-2">
             <button
@@ -105,22 +105,22 @@ export default function Sidebar() {
         <nav className="mt-4 flex-1 space-y-1">
           <Link href="/start" className={itemBase} aria-label="Home" onClick={() => setMobileOpen(false)}>
             <Icon label="Home" path="M3 12l9-7 9 7v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-8z" />
-            <span className="hidden md:inline">Home</span>
+            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Home</span>
           </Link>
 
           <button className={itemBase} aria-label="Ressources" type="button" onClick={() => setMobileOpen(false)}>
             <Icon label="Resources" path="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
-            <span className="hidden md:inline">Ressources</span>
+            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Ressources</span>
           </button>
 
           <button className={itemBase} aria-label="Quick Test" type="button" onClick={() => setMobileOpen(false)}>
             <Icon label="Quick Test" path="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5h-2v6l5 3 .9-1.5-3.9-2.3V7z" />
-            <span className="hidden md:inline">Quick Test</span>
+            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Quick Test</span>
           </button>
 
           <button className={itemBase} aria-label="Help" type="button" onClick={() => setMobileOpen(false)}>
             <Icon label="Help" path="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-2a1 1 0 01-1-1c0-2 3-2 3-5a3 3 0 10-6 0H6a6 6 0 1112 0c0 4-4 4-4 6a1 1 0 01-1 1z" />
-            <span className="hidden md:inline">Help</span>
+            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Help</span>
           </button>
         </nav>
 
@@ -135,7 +135,7 @@ export default function Sidebar() {
             aria-label="Log out"
           >
             <Icon label="Logout" path="M16 17l1.41-1.41L14.83 13H21v-2h-6.17l2.58-2.59L16 7l-5 5 5 5zM3 19h8v-2H5V7h6V5H3v14z" />
-            <span className="hidden md:inline">Log out</span>
+            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Log out</span>
           </button>
         </div>
       </aside>

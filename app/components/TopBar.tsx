@@ -1,20 +1,32 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 
 export default function TopBar({
   hideBackOn = [],
   right,
 }: {
   hideBackOn?: string[];
-  right?: React.ReactNode;
+  right?: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const shouldHideBack = hideBackOn.includes(pathname || "");
 
+  // Register service worker in production for PWA install + standalone feel
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prod = process.env.NODE_ENV === 'production';
+    if ('serviceWorker' in navigator && prod) {
+      try {
+        navigator.serviceWorker.register('/sw.js');
+      } catch {}
+    }
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700 h-12 flex items-center">
+    <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700 h-12 flex items-center pt-[env(safe-area-inset-top)]">
       <div className="max-w-5xl mx-auto px-4 w-full flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* Mobile menu toggle */}
