@@ -4,6 +4,10 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Career Navigator – MVP",
   description: "Seven Stories guided MVP (local only)",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
