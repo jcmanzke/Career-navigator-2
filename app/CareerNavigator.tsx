@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/utils/supabase/client";
+import TopBar from "@/app/components/TopBar";
 
 // --- Minimal helpers -------------------------------------------------------
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -331,35 +331,12 @@ function Shell({ step, setStep, saveState, children }) {
   // Top header content (logo/title) removed per requirements; logout/email handled in sidebar
   return (
     <div className="min-h-screen text-neutrals-900">
-      <header className="sticky top-0 z-40 backdrop-blur bg-neutrals-0/70 border-b border-accent-700 h-12 flex items-center">
-        <div className="max-w-5xl mx-auto px-4 w-full flex items-center justify-between">
-          <BackInHeader />
-          <SaveIndicator state={saveState} />
-        </div>
-      </header>
+      <TopBar hideBackOn={["/"]} right={<SaveIndicator state={saveState} />} />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <ProgressSteps current={Math.max(1, step || 1)} onSelect={setStep} />
         {children}
       </main>
     </div>
-  );
-}
-
-function BackInHeader() {
-  const router = useRouter();
-  const pathname = usePathname();
-  // Hide back on the root home page to match /start
-  if (pathname === "/") return null;
-  return (
-    <button
-      type="button"
-      onClick={() => router.back()}
-      className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-small text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
-      aria-label="Go back"
-    >
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 7l-5 5 5 5V7z"/></svg>
-      Back
-    </button>
   );
 }
 
