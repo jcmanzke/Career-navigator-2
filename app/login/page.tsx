@@ -14,29 +14,56 @@ export default function LoginPage() {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    try { v.muted = true; v.defaultMuted = true; } catch {}
+    let reversing = false;
+    let rafId: number | null = null;
+    const cancelRaf = () => { if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } };
+    try { v.muted = true; (v as any).defaultMuted = true; v.loop = false; v.playbackRate = 1; } catch {}
     // Try to start playback proactively (helps Safari/iOS)
     const tryPlay = () => v.play().then(() => setShowPoster(false)).catch(() => {});
     const onLoaded = () => tryPlay();
     const onCanPlay = () => tryPlay();
     const onPlaying = () => setShowPoster(false);
+
+    const reverseStep = () => {
+      if (!reversing) return;
+      const step = 1 / 60;
+      try {
+        v.currentTime = Math.max(0, v.currentTime - step);
+        if (v.currentTime <= 0.01) {
+          reversing = false;
+          v.currentTime = 0;
+          v.play().catch(() => {});
+          return;
+        }
+      } catch {}
+      rafId = requestAnimationFrame(reverseStep);
+    };
+
+    const onEnded = () => {
+      cancelRaf();
+      reversing = true;
+      try { v.pause(); } catch {}
+      rafId = requestAnimationFrame(reverseStep);
+    };
+
     v.addEventListener("loadeddata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
     v.addEventListener("playing", onPlaying);
+    v.addEventListener("ended", onEnded);
     // Nudge playback shortly after mount as well
     const t = setTimeout(tryPlay, 100);
     // If autoplay still hasn't started after 1s, show tap CTA
     const tapTimer = setTimeout(() => {
-      try {
-        if (v.paused) setNeedsTap(true);
-      } catch {}
+      try { if (v.paused) setNeedsTap(true); } catch {}
     }, 1000);
     return () => {
       clearTimeout(t);
       clearTimeout(tapTimer);
+      cancelRaf();
       v.removeEventListener("loadeddata", onLoaded);
       v.removeEventListener("canplay", onCanPlay);
       v.removeEventListener("playing", onPlaying);
+      v.removeEventListener("ended", onEnded);
     };
   }, []);
 
@@ -73,7 +100,6 @@ export default function LoginPage() {
         className="pointer-events-none fixed inset-0 z-0 h-full w-full object-cover motion-reduce:hidden block"
         autoPlay
         muted
-        loop
         playsInline
         preload="auto"
         src="/852422-hd_1920_1080_24fps.mp4"

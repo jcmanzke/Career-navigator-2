@@ -40,20 +40,54 @@ export default function Page() {
     return unsubscribe;
   }, []);
 
-  // Login view helpers ------------------------------------------------------
+  // Login view helpers + ping-pong video playback --------------------------
   useEffect(() => {
     // Only attempt when not loading and user is logged out
     if (loading || session) return;
     const v = videoRef.current;
     if (!v) return;
-    try { v.muted = true; (v as any).defaultMuted = true; } catch {}
+    let reversing = false;
+    let rafId: number | null = null;
+
+    const cancelRaf = () => { if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } };
+
+    try {
+      v.muted = true; (v as any).defaultMuted = true; v.loop = false; v.playbackRate = 1;
+    } catch {}
+
     const tryPlay = () => v.play().then(() => setShowPoster(false)).catch(() => {});
     const onLoaded = () => tryPlay();
     const onCanPlay = () => tryPlay();
     const onPlaying = () => setShowPoster(false);
+
+    const reverseStep = () => {
+      if (!reversing) return;
+      // target ~60fps reverse, adjust per frame time
+      const step = 1 / 60; // seconds
+      try {
+        v.currentTime = Math.max(0, v.currentTime - step);
+        if (v.currentTime <= 0.01) {
+          reversing = false;
+          v.currentTime = 0;
+          v.play().catch(() => {});
+          return;
+        }
+      } catch {}
+      rafId = requestAnimationFrame(reverseStep);
+    };
+
+    const onEnded = () => {
+      // When forward playback reaches end, run a manual reverse using RAF
+      cancelRaf();
+      reversing = true;
+      try { v.pause(); } catch {}
+      rafId = requestAnimationFrame(reverseStep);
+    };
+
     v.addEventListener("loadeddata", onLoaded);
     v.addEventListener("canplay", onCanPlay);
     v.addEventListener("playing", onPlaying);
+    v.addEventListener("ended", onEnded);
     const t = setTimeout(tryPlay, 100);
     const tapTimer = setTimeout(() => {
       try { if (v.paused) setNeedsTap(true); } catch {}
@@ -61,9 +95,11 @@ export default function Page() {
     return () => {
       clearTimeout(t);
       clearTimeout(tapTimer);
+      cancelRaf();
       v.removeEventListener("loadeddata", onLoaded);
       v.removeEventListener("canplay", onCanPlay);
       v.removeEventListener("playing", onPlaying);
+      v.removeEventListener("ended", onEnded);
     };
   }, [loading, session]);
 
@@ -111,7 +147,6 @@ export default function Page() {
           className="pointer-events-none fixed inset-0 z-0 h-full w-full object-cover motion-reduce:hidden block"
           autoPlay
           muted
-          loop
           playsInline
           preload="auto"
           src="/852422-hd_1920_1080_24fps.mp4"
@@ -155,4 +190,3 @@ export default function Page() {
     </div>
   );
 }
-
