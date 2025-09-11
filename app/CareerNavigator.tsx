@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/utils/supabase/client";
 
@@ -347,6 +347,9 @@ function Shell({ step, setStep, saveState, children }) {
 
 function BackInHeader() {
   const router = useRouter();
+  const pathname = usePathname();
+  // Hide back on the root home page to match /start
+  if (pathname === "/") return null;
   return (
     <button
       type="button"
