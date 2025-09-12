@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { navItems } from "./navItems";
 
 const Icon = ({ path, label, stroke = false }: { path: string; label: string; stroke?: boolean }) => (
   <svg
@@ -26,7 +26,6 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const router = useRouter();
 
   // Persist collapsed state (desktop only)
   useEffect(() => {
@@ -64,8 +63,13 @@ export default function Sidebar() {
   const itemBase =
     "w-full flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
+  // Show item labels when the sidebar is expanded or when the mobile
+  // menu is open. Tailwind needs concrete class strings (md:hidden /
+  // md:inline) so we build them explicitly instead of using a dynamic
+  // template that JIT might not detect, which previously caused labels
+  // and the logout text to disappear on some pages.
   const labelCls = (collapsed: boolean, mobileOpen: boolean) =>
-    `${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'}`;
+    `${mobileOpen ? 'inline' : 'hidden'} ${collapsed ? 'md:hidden' : 'md:inline'}`;
 
   return (
     <>
@@ -83,16 +87,16 @@ export default function Sidebar() {
         aria-label="Sidebar navigation"
         className={
           `${collapsed ? "md:w-16" : "md:w-60"} ` +
-          `shrink-0 border-r border-accent-700 bg-neutrals-50/70 backdrop-blur-md px-2 py-3 flex flex-col min-h-screen overflow-y-auto ` +
+          `shrink-0 border-r border-accent-700 bg-neutrals-50/70 backdrop-blur-md px-2 py-3 flex flex-col h-screen overflow-hidden ` +
           // Mobile off-canvas behavior
-          `fixed inset-y-0 left-0 z-50 w-64 transform transition-transform md:static md:translate-x-0 ` +
+          `fixed inset-y-0 left-0 z-50 w-64 transform transition-transform md:sticky md:top-0 md:bottom-auto md:translate-x-0 ` +
           (mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0")
         }
         role="navigation"
       >
         <div className="flex items-center justify-between px-1">
           {/* Title */}
-          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'} font-semibold text-neutrals-900`}>Menu</span>
+          <span className={`${mobileOpen ? 'inline' : 'hidden'} ${collapsed ? 'md:hidden' : 'md:inline'} font-semibold text-neutrals-900`}>Menu</span>
           {/* Collapse toggle (desktop) and Close (mobile) */}
           <div className="flex items-center gap-2">
             <button
@@ -116,70 +120,80 @@ export default function Sidebar() {
         </div>
 
         <nav className="mt-4 flex-1 space-y-1">
-          <Link
-            href="/start"
-            className={itemBase}
-            aria-label="Home"
-            onClick={() => setMobileOpen(false)}
-            title={collapsed ? 'Home' : undefined}
-          >
-            <Icon label="Home" path="M3 12l9-7 9 7v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-8z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Home</span>
-          </Link>
-
-          <button
-            className={itemBase}
-            aria-label="Resources"
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            title={collapsed ? 'Resources' : undefined}
-          >
-            <Icon label="Resources" path="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Resources</span>
-          </button>
-
-          <button
-            className={itemBase}
-            aria-label="Quick Test"
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            title={collapsed ? 'Quick Test' : undefined}
-          >
-            <Icon label="Quick Test" path="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5h-2v6l5 3 .9-1.5-3.9-2.3V7z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Quick Test</span>
-          </button>
-
-          <button
-            className={itemBase}
-            aria-label="Help"
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            title={collapsed ? 'Help' : undefined}
-          >
-            <Icon label="Help" path="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-2a1 1 0 01-1-1c0-2 3-2 3-5a3 3 0 10-6 0H6a6 6 0 1112 0c0 4-4 4-4 6a1 1 0 01-1 1z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Help</span>
-          </button>
+          {navItems.map((item) =>
+            item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={itemBase}
+                aria-label={item.label}
+                onClick={() => setMobileOpen(false)}
+                title={collapsed ? item.label : undefined}
+              >
+                <Icon label={item.label} path={item.iconPath} stroke />
+                <span className={labelCls(collapsed, mobileOpen)}>{item.label}</span>
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                className={itemBase}
+                aria-label={item.label}
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                title={collapsed ? item.label : undefined}
+              >
+                <Icon label={item.label} path={item.iconPath} stroke />
+                <span className={labelCls(collapsed, mobileOpen)}>{item.label}</span>
+              </button>
+            )
+          )}
         </nav>
 
         <div className="mt-auto px-1 pb-1">
           {email && (
-            <div className={`mb-2 px-3 py-1 text-small text-neutrals-600 truncate ${collapsed ? 'hidden md:block md:truncate' : ''}`} aria-label="User email">{email}</div>
+            <div
+              className={
+                "mb-2 px-3 py-1 text-small text-neutrals-600 truncate" +
+                (collapsed ? " hidden" : "")
+              }
+              aria-label="User email"
+            >
+              {email}
+            </div>
           )}
-          <button
-            type="button"
-            onClick={logout}
-            className={itemBase + " w-full justify-start"}
-            aria-label="Log out"
-            title={collapsed ? 'Log out' : undefined}
-          >
-            {/* Stroke-friendly logout icon (arrow out of a rectangle) */}
-            <Icon
-              label="Logout"
-              path="M17 8l4 4-4 4M21 12H10M4 4h7a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"
-              stroke
-            />
-            <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
-          </button>
+          {email ? (
+            <button
+              type="button"
+              onClick={logout}
+              className={itemBase + " w-full justify-start"}
+              aria-label="Log out"
+              title={collapsed ? 'Log out' : undefined}
+            >
+              {/* Stroke-friendly logout icon (arrow out of a rectangle) */}
+              <Icon
+                label="Logout"
+                path="M17 8l4 4-4 4M21 12H10M4 4h7a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"
+                stroke
+              />
+              <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className={itemBase + " w-full justify-start"}
+              aria-label="Log in"
+              title={collapsed ? 'Log in' : undefined}
+              onClick={() => setMobileOpen(false)}
+            >
+              {/* Login icon: arrow into a rectangle */}
+              <Icon
+                label="Login"
+                path="M7 8l-4 4 4 4M3 12h12M13 4h7a2 2 0 012 2v12a2 2 0 01-2 2h-7a2 2 0 01-2-2V6a2 2 0 012-2z"
+                stroke
+              />
+              <span className={labelCls(collapsed, mobileOpen)}>Log in</span>
+            </Link>
+          )}
         </div>
       </aside>
     </>
