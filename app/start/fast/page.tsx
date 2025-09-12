@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { saveProgress } from "@/lib/progress";
+import { createClient } from "@/utils/supabase/client";
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -42,16 +43,97 @@ function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n:
   );
 }
 
+type Basics = {
+  background: string;
+  current: string;
+  goals: string;
+};
+
 export default function FastTrack() {
   // step: 0 = Intro (not part of progress), 1..3 are the steps
   const [step, setStep] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [basics, setBasics] = useState<Basics>({ background: "", current: "", goals: "" });
+  const [saving, setSaving] = useState<"idle" | "saving">("idle");
 
   useEffect(() => {
     const id = step === 0 ? "intro" : `step-${step}`;
     saveProgress({ track: "fast", stepId: id, updatedAt: Date.now() });
   }, [step]);
+
+  // Fetch or initialize the user's fast-scan session on login
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return; // unauthenticated view stays client-only
+        setUserId(user.id);
+        // Load session
+        const { data: row } = await supabase
+          .from("fast_scan_sessions")
+          .select("id, step, basics, results")
+          .eq("user_id", user.id)
+          .single();
+        if (row) {
+          setSessionId(row.id);
+          setStep(row.step ?? 1);
+          if (row.basics) setBasics({ background: row.basics.background || "", current: row.basics.current || "", goals: row.basics.goals || "" });
+          if (row.results) setResults(row.results);
+        } else {
+          // create an empty session for this user
+          const { data: created, error } = await supabase
+            .from("fast_scan_sessions")
+            .insert({ user_id: user.id, step: 1, basics: {}, results: null })
+            .select()
+            .single();
+          if (!error && created) {
+            setSessionId(created.id);
+            setStep(created.step ?? 1);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  const upsertSession = useCallback(
+    async (patch: Partial<{ step: number; basics: Basics; results: any }>) => {
+      if (!userId) return;
+      try {
+        setSaving("saving");
+        const supabase = createClient();
+        const payload: any = { user_id: userId };
+        if (typeof patch.step === "number") payload.step = patch.step;
+        if (patch.basics) payload.basics = patch.basics;
+        if ("results" in patch) payload.results = patch.results;
+        const { data } = await supabase
+          .from("fast_scan_sessions")
+          .upsert(payload, { onConflict: "user_id" })
+          .select()
+          .single();
+        if (data?.id) setSessionId(data.id);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setSaving("idle");
+      }
+    },
+    [userId],
+  );
+
+  // Auto-save basics with debounce while typing
+  useEffect(() => {
+    if (!userId || step < 1) return;
+    const t = setTimeout(() => {
+      upsertSession({ basics });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [basics, userId, step, upsertSession]);
 
   // Dummy webhook results we will replace later
   const dummyData = useMemo(
@@ -77,6 +159,7 @@ export default function FastTrack() {
     setTimeout(() => {
       setLoading(false);
       setResults(dummyData);
+      upsertSession({ results: dummyData });
     }, 1500);
   };
 
@@ -103,15 +186,39 @@ export default function FastTrack() {
 
       {step >= 1 && (
         <div className="max-w-4xl mx-auto space-y-6">
-          <ProgressSteps3 current={step} onSelect={(n) => setStep(n)} />
+          <ProgressSteps3 current={step} onSelect={(n) => { setStep(n); upsertSession({ step: n }); }} />
 
           {step === 1 && (
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
               <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
-              <p className="text-neutrals-700">Platzhalterinhalt – hier kommen die Eingaben für den Fast‑Track hin.</p>
+              <p className="text-neutrals-700 mb-4">Kurze Angaben, damit wir eine schnelle Einschätzung erstellen können.</p>
+              <div className="space-y-3">
+                <input
+                  className="w-full h-12 px-4 rounded-2xl border border-accent-700"
+                  placeholder="Beruflicher Hintergrund"
+                  value={basics.background}
+                  onChange={(e) => setBasics((b) => ({ ...b, background: e.target.value }))}
+                />
+                <input
+                  className="w-full h-12 px-4 rounded-2xl border border-accent-700"
+                  placeholder="Aktuelle Rolle"
+                  value={basics.current}
+                  onChange={(e) => setBasics((b) => ({ ...b, current: e.target.value }))}
+                />
+                <textarea
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-2xl border border-accent-700"
+                  placeholder="Ziele/Interessen (kurz)"
+                  value={basics.goals}
+                  onChange={(e) => setBasics((b) => ({ ...b, goals: e.target.value }))}
+                />
+              </div>
               <div className="flex justify-end pt-6">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={async () => {
+                    await upsertSession({ step: 2, basics });
+                    setStep(2);
+                  }}
                   className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
                 >
                   Weiter
@@ -123,11 +230,22 @@ export default function FastTrack() {
           {step === 2 && (
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
               <h2 className="text-lg font-semibold mb-2">Schritt 2: Bestätigung</h2>
-              <p className="text-neutrals-700">Kurz prüfen und bestätigen. Danach werden die Ergebnisse erzeugt.</p>
+              <p className="text-neutrals-700 mb-4">Kurz prüfen und bestätigen. Danach werden die Ergebnisse erzeugt.</p>
+              <div className="rounded-2xl border p-4 bg-neutrals-0">
+                <div className="text-small text-neutrals-500 mb-1">Beruflicher Hintergrund</div>
+                <div className="mb-3">{basics.background || "—"}</div>
+                <div className="text-small text-neutrals-500 mb-1">Aktuelle Rolle</div>
+                <div className="mb-3">{basics.current || "—"}</div>
+                <div className="text-small text-neutrals-500 mb-1">Ziele/Interessen</div>
+                <div className="whitespace-pre-wrap">{basics.goals || "—"}</div>
+              </div>
               <div className="flex justify-between pt-6">
                 <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl border">Zurück</button>
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={async () => {
+                    await upsertSession({ step: 3, basics });
+                    setStep(3);
+                  }}
                   className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
                 >
                   Weiter
@@ -171,8 +289,9 @@ export default function FastTrack() {
                 )}
               </div>
 
-              <div className="flex justify-start w-full max-w-3xl pt-8">
+              <div className="flex justify-between w-full max-w-3xl pt-8">
                 <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">Zurück</button>
+                <div className="text-small text-neutrals-500 self-center">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
               </div>
             </section>
           )}

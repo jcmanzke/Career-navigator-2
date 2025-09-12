@@ -131,3 +131,39 @@ create table public.plan_risks (
   risk text not null,
   mitigation text not null
 );
+
+-- Fast Scan (Fast-Track) tables --------------------------------------------
+-- A compact, distinct set of tables so we can distinguish from deep analysis
+-- One active session per user (upsert on user_id)
+create table if not exists public.fast_scan_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  step int not null default 0,
+  basics jsonb default '{}'::jsonb,
+  results jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.fast_scan_sessions enable row level security;
+create policy if not exists "fast_scan_owner"
+  on public.fast_scan_sessions
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Ensure one row per user for easy upsert by user_id
+create unique index if not exists fast_scan_sessions_user_idx on public.fast_scan_sessions(user_id);
+
+-- Update updated_at automatically
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists fast_scan_sessions_set_updated_at on public.fast_scan_sessions;
+create trigger fast_scan_sessions_set_updated_at
+  before update on public.fast_scan_sessions
+  for each row execute function public.set_updated_at();
