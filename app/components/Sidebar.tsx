@@ -64,8 +64,13 @@ export default function Sidebar() {
   const itemBase =
     "w-full flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
+  // Show item labels when the sidebar is expanded or when the mobile
+  // menu is open. Tailwind needs concrete class strings (md:hidden /
+  // md:inline) so we build them explicitly instead of using a dynamic
+  // template that JIT might not detect, which previously caused labels
+  // and the logout text to disappear on some pages.
   const labelCls = (collapsed: boolean, mobileOpen: boolean) =>
-    `${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'}`;
+    `${mobileOpen ? 'inline' : 'hidden'} ${collapsed ? 'md:hidden' : 'md:inline'}`;
 
   return (
     <>
@@ -92,7 +97,7 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-between px-1">
           {/* Title */}
-          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'} font-semibold text-neutrals-900`}>Menu</span>
+          <span className={`${mobileOpen ? 'inline' : 'hidden'} ${collapsed ? 'md:hidden' : 'md:inline'} font-semibold text-neutrals-900`}>Menu</span>
           {/* Collapse toggle (desktop) and Close (mobile) */}
           <div className="flex items-center gap-2">
             <button
@@ -163,23 +168,49 @@ export default function Sidebar() {
 
         <div className="mt-auto px-1 pb-1">
           {email && (
-            <div className={`mb-2 px-3 py-1 text-small text-neutrals-600 truncate ${collapsed ? 'hidden md:block md:truncate' : ''}`} aria-label="User email">{email}</div>
+            <div
+              className={
+                "mb-2 px-3 py-1 text-small text-neutrals-600 truncate" +
+                (collapsed ? " hidden" : "")
+              }
+              aria-label="User email"
+            >
+              {email}
+            </div>
           )}
-          <button
-            type="button"
-            onClick={logout}
-            className={itemBase + " w-full justify-start"}
-            aria-label="Log out"
-            title={collapsed ? 'Log out' : undefined}
-          >
-            {/* Stroke-friendly logout icon (arrow out of a rectangle) */}
-            <Icon
-              label="Logout"
-              path="M17 8l4 4-4 4M21 12H10M4 4h7a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"
-              stroke
-            />
-            <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
-          </button>
+          {email ? (
+            <button
+              type="button"
+              onClick={logout}
+              className={itemBase + " w-full justify-start"}
+              aria-label="Log out"
+              title={collapsed ? 'Log out' : undefined}
+            >
+              {/* Stroke-friendly logout icon (arrow out of a rectangle) */}
+              <Icon
+                label="Logout"
+                path="M17 8l4 4-4 4M21 12H10M4 4h7a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"
+                stroke
+              />
+              <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className={itemBase + " w-full justify-start"}
+              aria-label="Log in"
+              title={collapsed ? 'Log in' : undefined}
+              onClick={() => setMobileOpen(false)}
+            >
+              {/* Login icon: arrow into a rectangle */}
+              <Icon
+                label="Login"
+                path="M7 8l-4 4 4 4M3 12h12M13 4h7a2 2 0 012 2v12a2 2 0 01-2 2h-7a2 2 0 01-2-2V6a2 2 0 012-2z"
+                stroke
+              />
+              <span className={labelCls(collapsed, mobileOpen)}>Log in</span>
+            </Link>
+          )}
         </div>
       </aside>
     </>
