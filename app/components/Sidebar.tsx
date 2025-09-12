@@ -5,8 +5,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
-const Icon = ({ path, label }: { path: string; label: string }) => (
-  <svg aria-hidden="true" focusable="false" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+const Icon = ({ path, label, stroke = false }: { path: string; label: string; stroke?: boolean }) => (
+  <svg
+    aria-hidden="true"
+    focusable="false"
+    className="h-5 w-5"
+    viewBox="0 0 24 24"
+    fill={stroke ? "none" : "currentColor"}
+    stroke={stroke ? "currentColor" : "none"}
+    strokeWidth={stroke ? 2 : undefined}
+    strokeLinecap={stroke ? "round" : undefined}
+    strokeLinejoin={stroke ? "round" : undefined}
+  >
     <path d={path} />
     <title>{label}</title>
   </svg>
@@ -89,7 +99,7 @@ export default function Sidebar() {
               aria-expanded={!collapsed}
               className="hidden md:inline-flex rounded-full p-2 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 text-neutrals-900"
             >
-              <Icon label="Toggle" path="M4 12h16M4 6h16M4 18h16" />
+              <Icon label="Toggle" path="M4 12h16M4 6h16M4 18h16" stroke />
             </button>
             <button
               type="button"
@@ -97,7 +107,7 @@ export default function Sidebar() {
               className="md:hidden inline-flex rounded-full p-2 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 text-neutrals-900"
               aria-label="Close menu"
             >
-              <Icon label="Close" path="M6 18L18 6M6 6l12 12" />
+              <Icon label="Close" path="M6 18L18 6M6 6l12 12" stroke />
             </button>
           </div>
         </div>
