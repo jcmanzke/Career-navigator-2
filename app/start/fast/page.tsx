@@ -1,20 +1,33 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect } from "react";
 import { saveProgress } from "@/lib/progress";
+import FastSteps from "@/app/components/FastSteps";
 
-export default function FastTrackPlaceholder() {
+export default function FastScanWelcome() {
+  useEffect(() => {
+    saveProgress({ track: "fast", stepId: "welcome", updatedAt: Date.now() });
+  }, []);
+
   return (
-    <main className="min-h-screen px-4 py-8">
-      <h1 className="font-display text-neutrals-900 text-[28px] md:text-[32px] font-semibold">Fast Track (placeholder)</h1>
-      <p className="mt-2 text-neutrals-700">This flow is not implemented yet.</p>
-      <button
-        type="button"
-        onClick={() => saveProgress({ track: "fast", stepId: "intro", updatedAt: Date.now() })}
-        className="mt-6 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
-        aria-label="Save demo progress"
-      >
-        Save demo progress
-      </button>
+    <main className="min-h-screen flex flex-col items-center px-4 py-8 md:py-12 text-center">
+      <FastSteps />
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <h1 className="font-display text-neutrals-900 text-[28px] md:text-[32px] font-semibold">
+          Welcome to your Career Fast Scan
+        </h1>
+        <p className="mt-4 max-w-xl text-neutrals-700">
+          In the next 10 minutes, you’ll get a personalized snapshot of your strengths, values, and potential career development paths. Just answer a few quick prompts — we’ll do the rest.
+        </p>
+        <Link
+          href="/start/fast/prompts"
+          className="mt-8 rounded-full bg-primary-500 text-[#2C2C2C] px-6 py-3 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+          aria-label="Start Fast Scan"
+        >
+          Start My Fast Scan
+        </Link>
+      </div>
     </main>
   );
 }
