@@ -64,6 +64,9 @@ export default function Sidebar() {
   const itemBase =
     "w-full flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
+  const labelCls = (collapsed: boolean, mobileOpen: boolean) =>
+    `${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'}`;
+
   return (
     <>
       {/* Backdrop for mobile */}
@@ -89,7 +92,7 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-between px-1">
           {/* Title */}
-          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline font-semibold text-neutrals-900`}>Menu</span>
+          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'} font-semibold text-neutrals-900`}>Menu</span>
           {/* Collapse toggle (desktop) and Close (mobile) */}
           <div className="flex items-center gap-2">
             <button
@@ -98,7 +101,7 @@ export default function Sidebar() {
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               aria-expanded={!collapsed}
               className="hidden md:inline-flex rounded-full p-2 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 text-neutrals-900"
-            >
+              >
               <Icon label="Toggle" path="M4 12h16M4 6h16M4 18h16" stroke />
             </button>
             <button
@@ -113,39 +116,64 @@ export default function Sidebar() {
         </div>
 
         <nav className="mt-4 flex-1 space-y-1">
-          <Link href="/start" className={itemBase} aria-label="Home" onClick={() => setMobileOpen(false)}>
-            <Icon label="Home" path="M3 12l9-7 9 7v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-8z" />
-            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Home</span>
+          <Link
+            href="/start"
+            className={itemBase}
+            aria-label="Home"
+            onClick={() => setMobileOpen(false)}
+            title={collapsed ? 'Home' : undefined}
+          >
+            <Icon label="Home" path="M3 12l9-7 9 7v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-8z" stroke />
+            <span className={labelCls(collapsed, mobileOpen)}>Home</span>
           </Link>
 
-          <button className={itemBase} aria-label="Ressources" type="button" onClick={() => setMobileOpen(false)}>
-            <Icon label="Resources" path="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
-            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Ressources</span>
+          <button
+            className={itemBase}
+            aria-label="Resources"
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            title={collapsed ? 'Resources' : undefined}
+          >
+            <Icon label="Resources" path="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" stroke />
+            <span className={labelCls(collapsed, mobileOpen)}>Resources</span>
           </button>
 
-          <button className={itemBase} aria-label="Quick Test" type="button" onClick={() => setMobileOpen(false)}>
-            <Icon label="Quick Test" path="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5h-2v6l5 3 .9-1.5-3.9-2.3V7z" />
-            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Quick Test</span>
+          <button
+            className={itemBase}
+            aria-label="Quick Test"
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            title={collapsed ? 'Quick Test' : undefined}
+          >
+            <Icon label="Quick Test" path="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5h-2v6l5 3 .9-1.5-3.9-2.3V7z" stroke />
+            <span className={labelCls(collapsed, mobileOpen)}>Quick Test</span>
           </button>
 
-          <button className={itemBase} aria-label="Help" type="button" onClick={() => setMobileOpen(false)}>
-            <Icon label="Help" path="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-2a1 1 0 01-1-1c0-2 3-2 3-5a3 3 0 10-6 0H6a6 6 0 1112 0c0 4-4 4-4 6a1 1 0 01-1 1z" />
-            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Help</span>
+          <button
+            className={itemBase}
+            aria-label="Help"
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            title={collapsed ? 'Help' : undefined}
+          >
+            <Icon label="Help" path="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-2a1 1 0 01-1-1c0-2 3-2 3-5a3 3 0 10-6 0H6a6 6 0 1112 0c0 4-4 4-4 6a1 1 0 01-1 1z" stroke />
+            <span className={labelCls(collapsed, mobileOpen)}>Help</span>
           </button>
         </nav>
 
-        <div className="mt-auto px-1">
+        <div className="mt-auto px-1 pb-1">
           {email && (
-            <div className="mb-2 px-3 py-1 text-small text-neutrals-600 truncate" aria-label="User email">{email}</div>
+            <div className={`mb-2 px-3 py-1 text-small text-neutrals-600 truncate ${collapsed ? 'hidden md:block md:truncate' : ''}`} aria-label="User email">{email}</div>
           )}
           <button
             type="button"
             onClick={logout}
             className={itemBase + " w-full justify-start"}
             aria-label="Log out"
+            title={collapsed ? 'Log out' : undefined}
           >
-            <Icon label="Logout" path="M16 17l1.41-1.41L14.83 13H21v-2h-6.17l2.58-2.59L16 7l-5 5 5 5zM3 19h8v-2H5V7h6V5H3v14z" />
-            <span className={`${mobileOpen ? 'inline' : 'hidden'} md:inline`}>Log out</span>
+            <Icon label="Logout" path="M16 17l1.41-1.41L14.83 13H21v-2h-6.17l2.58-2.59L16 7l-5 5 5 5zM3 19h8v-2H5V7h6V5H3v14z" stroke />
+            <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
           </button>
         </div>
       </aside>
