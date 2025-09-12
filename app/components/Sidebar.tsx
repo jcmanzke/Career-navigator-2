@@ -172,7 +172,12 @@ export default function Sidebar() {
             aria-label="Log out"
             title={collapsed ? 'Log out' : undefined}
           >
-            <Icon label="Logout" path="M16 17l1.41-1.41L14.83 13H21v-2h-6.17l2.58-2.59L16 7l-5 5 5 5zM3 19h8v-2H5V7h6V5H3v14z" stroke />
+            {/* Stroke-friendly logout icon (arrow out of a rectangle) */}
+            <Icon
+              label="Logout"
+              path="M17 8l4 4-4 4M21 12H10M4 4h7a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"
+              stroke
+            />
             <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
           </button>
         </div>
