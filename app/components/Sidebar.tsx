@@ -64,8 +64,13 @@ export default function Sidebar() {
   const itemBase =
     "w-full flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
+  // Show item labels when the sidebar is expanded or when the mobile
+  // menu is open. Tailwind needs concrete class strings (md:hidden /
+  // md:inline) so we build them explicitly instead of using a dynamic
+  // template that JIT might not detect, which previously caused labels
+  // and the logout text to disappear on some pages.
   const labelCls = (collapsed: boolean, mobileOpen: boolean) =>
-    `${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'}`;
+    `${mobileOpen ? 'inline' : 'hidden'} ${collapsed ? 'md:hidden' : 'md:inline'}`;
 
   return (
     <>
@@ -92,7 +97,7 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-between px-1">
           {/* Title */}
-          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'} font-semibold text-neutrals-900`}>Menu</span>
+          <span className={`${mobileOpen ? 'inline' : 'hidden'} ${collapsed ? 'md:hidden' : 'md:inline'} font-semibold text-neutrals-900`}>Menu</span>
           {/* Collapse toggle (desktop) and Close (mobile) */}
           <div className="flex items-center gap-2">
             <button
@@ -163,7 +168,15 @@ export default function Sidebar() {
 
         <div className="mt-auto px-1 pb-1">
           {email && (
-            <div className={`mb-2 px-3 py-1 text-small text-neutrals-600 truncate ${collapsed ? 'hidden md:block md:truncate' : ''}`} aria-label="User email">{email}</div>
+            <div
+              className={
+                "mb-2 px-3 py-1 text-small text-neutrals-600 truncate" +
+                (collapsed ? " hidden" : "")
+              }
+              aria-label="User email"
+            >
+              {email}
+            </div>
           )}
           <button
             type="button"
