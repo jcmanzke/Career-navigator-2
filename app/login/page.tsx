@@ -19,7 +19,10 @@ export default function LoginPage() {
     const cancelRaf = () => { if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } };
     try { v.muted = true; (v as any).defaultMuted = true; v.loop = false; v.playbackRate = 1; } catch {}
     // Try to start playback proactively (helps Safari/iOS)
-    const tryPlay = () => v.play().then(() => setShowPoster(false)).catch(() => {});
+    const tryPlay = () => {
+      try { v.currentTime = 0; } catch {}
+      return v.play().then(() => setShowPoster(false)).catch(() => {});
+    };
     const onLoaded = () => tryPlay();
     const onCanPlay = () => tryPlay();
     const onPlaying = () => setShowPoster(false);
@@ -50,14 +53,12 @@ export default function LoginPage() {
     v.addEventListener("canplay", onCanPlay);
     v.addEventListener("playing", onPlaying);
     v.addEventListener("ended", onEnded);
-    // Nudge playback shortly after mount as well
-    const t = setTimeout(tryPlay, 100);
+    tryPlay();
     // If autoplay still hasn't started after 1s, show tap CTA
     const tapTimer = setTimeout(() => {
       try { if (v.paused) setNeedsTap(true); } catch {}
     }, 1000);
     return () => {
-      clearTimeout(t);
       clearTimeout(tapTimer);
       cancelRaf();
       v.removeEventListener("loadeddata", onLoaded);
