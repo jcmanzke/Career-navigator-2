@@ -637,7 +637,7 @@ function Phase4({ journey, onNext, onBack }) {
     try {
       setLoading(true);
       const res = await fetch(
-        "https://chrismzke.app.n8n.cloud/webhook-test/c4123f59-47a3-4f9b-a225-126d780722e9",
+        "https://chrismzke.app.n8n.cloud/webhook/c4123f59-47a3-4f9b-a225-126d780722e9",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -8,37 +8,111 @@ function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
 
-function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
-  const steps = [1, 2, 3];
-  const pct = Math.round(((current - 1) / 3) * 100);
+function ProcessOverview({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
+  const steps = [
+    { id: 1, label: "Basisinfos" },
+    { id: 2, label: "Bestätigung" },
+    { id: 3, label: "Ergebnisse" },
+  ];
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-center gap-3 mb-2">
-        {steps.map((n) => (
-          <div key={n} className="flex items-center">
-            <button
-              type="button"
-              onClick={() => onSelect?.(n)}
+    <ol className="space-y-4">
+      {steps.map((s) => (
+        <li key={s.id}>
+          <button
+            type="button"
+            onClick={() => onSelect?.(s.id)}
+            className="flex items-center gap-2"
+            title={s.label}
+          >
+            <span
               className={cls(
-                "h-8 w-8 rounded-full flex items-center justify-center text-small font-medium focus:outline-none",
-                n < current
+                "h-6 w-6 rounded-full flex items-center justify-center text-small font-medium",
+                s.id < current
                   ? "bg-semantic-success-base text-neutrals-0"
-                  : n === current
+                  : s.id === current
                   ? "bg-primary-500 text-neutrals-0"
                   : "bg-neutrals-200 text-neutrals-600",
               )}
-              title={`Schritt ${n}`}
             >
-              {n}
-            </button>
-            {n !== 3 && <div className="w-6 h-1 mx-2 rounded bg-neutrals-200" />}
+              {s.id}
+            </span>
+            <span
+              className={cls(
+                "text-sm",
+                s.id === current ? "font-semibold text-neutrals-900" : "text-neutrals-600",
+              )}
+            >
+              {s.label}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ChatWindow({ userId, sessionId }: { userId: string | null; sessionId: string | null }) {
+  const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [input, setInput] = useState("");
+
+  const send = useCallback(async () => {
+    const msg = input.trim();
+    if (!msg) return;
+    const userEntry = { role: "user" as const, text: msg };
+    setMessages((m) => [...m, userEntry]);
+    setInput("");
+    try {
+      const res = await fetch(
+        "https://chrismzke.app.n8n.cloud/webhook-test/d2dabf0d-f2de-4a37-bab3-b34599b1ee3a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, sessionId, message: msg }),
+        },
+      );
+      const text = await res.text();
+      setMessages((m) => [...m, { role: "ai", text }]);
+    } catch {
+      setMessages((m) => [...m, { role: "ai", text: "Es ist ein Fehler aufgetreten." }]);
+    }
+  }, [input, userId, sessionId]);
+
+  return (
+    <div className="flex flex-col h-full rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-4">
+      <div className="flex-1 overflow-y-auto space-y-2">
+        {messages.map((m, i) => (
+          <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
+            <span
+              className={cls(
+                "inline-block px-3 py-2 rounded-xl",
+                m.role === "user" ? "bg-primary-500 text-[#2C2C2C]" : "bg-neutrals-200 text-neutrals-800",
+              )}
+            >
+              {m.text}
+            </span>
           </div>
         ))}
       </div>
-      <div className="h-2 bg-neutrals-200 rounded-full">
-        <div className="h-2 bg-primary-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-      </div>
-      <p className="text-center text-small text-neutrals-500 mt-1">Fortschritt: {pct}%</p>
+      <form
+        className="pt-2 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+      >
+        <input
+          className="flex-1 h-10 px-3 rounded-xl border border-accent-700"
+          placeholder="Frage stellen..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 rounded-xl bg-primary-500 text-[#2C2C2C] font-semibold"
+        >
+          Senden
+        </button>
+      </form>
     </div>
   );
 }
@@ -135,7 +209,7 @@ export default function FastTrack() {
     return () => clearTimeout(t);
   }, [basics, userId, step, upsertSession]);
 
-  // Dummy webhook results we will replace later
+  // Fallback results used if webhook fails
   const dummyData = useMemo(
     () => ({
       summary: "Vorläufige Ergebnisse des Fast-Track Flows",
@@ -155,12 +229,31 @@ export default function FastTrack() {
   const generate = async () => {
     setLoading(true);
     setResults(null);
-    // Simulate request/stream. Later replaced by webhook handling.
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await fetch(
+        "https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, sessionId, basics }),
+        },
+      );
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { summary: text };
+      }
+      setResults(data);
+      upsertSession({ results: data });
+    } catch (e) {
+      console.error(e);
       setResults(dummyData);
       upsertSession({ results: dummyData });
-    }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -185,116 +278,136 @@ export default function FastTrack() {
       )}
 
       {step >= 1 && (
-        <div className="max-w-4xl mx-auto space-y-6">
-          <ProgressSteps3 current={step} onSelect={(n) => { setStep(n); upsertSession({ step: n }); }} />
+        <div className="max-w-6xl mx-auto flex gap-6">
+          <aside className="w-40 flex-shrink-0">
+            <ProcessOverview
+              current={step}
+              onSelect={(n) => {
+                setStep(n);
+                upsertSession({ step: n });
+              }}
+            />
+          </aside>
 
-          {step === 1 && (
-            <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
-              <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
-              <p className="text-neutrals-700 mb-4">Kurze Angaben, damit wir eine schnelle Einschätzung erstellen können.</p>
-              <div className="space-y-3">
-                <input
-                  className="w-full h-12 px-4 rounded-2xl border border-accent-700"
-                  placeholder="Beruflicher Hintergrund"
-                  value={basics.background}
-                  onChange={(e) => setBasics((b) => ({ ...b, background: e.target.value }))}
-                />
-                <input
-                  className="w-full h-12 px-4 rounded-2xl border border-accent-700"
-                  placeholder="Aktuelle Rolle"
-                  value={basics.current}
-                  onChange={(e) => setBasics((b) => ({ ...b, current: e.target.value }))}
-                />
-                <textarea
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-2xl border border-accent-700"
-                  placeholder="Ziele/Interessen (kurz)"
-                  value={basics.goals}
-                  onChange={(e) => setBasics((b) => ({ ...b, goals: e.target.value }))}
-                />
-              </div>
-              <div className="flex justify-end pt-6">
+          <div className="flex-1 space-y-6">
+            {step === 1 && (
+              <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
+                <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
+                <p className="text-neutrals-700 mb-4">Kurze Angaben, damit wir eine schnelle Einschätzung erstellen können.</p>
+                <div className="space-y-3">
+                  <input
+                    className="w-full h-12 px-4 rounded-2xl border border-accent-700"
+                    placeholder="Beruflicher Hintergrund"
+                    value={basics.background}
+                    onChange={(e) => setBasics((b) => ({ ...b, background: e.target.value }))}
+                  />
+                  <input
+                    className="w-full h-12 px-4 rounded-2xl border border-accent-700"
+                    placeholder="Aktuelle Rolle"
+                    value={basics.current}
+                    onChange={(e) => setBasics((b) => ({ ...b, current: e.target.value }))}
+                  />
+                  <textarea
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-2xl border border-accent-700"
+                    placeholder="Ziele/Interessen (kurz)"
+                    value={basics.goals}
+                    onChange={(e) => setBasics((b) => ({ ...b, goals: e.target.value }))}
+                  />
+                </div>
+                <div className="flex justify-end pt-6">
+                  <button
+                    onClick={async () => {
+                      await upsertSession({ step: 2, basics });
+                      setStep(2);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+                  >
+                    Weiter
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {step === 2 && (
+              <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
+                <h2 className="text-lg font-semibold mb-2">Schritt 2: Bestätigung</h2>
+                <p className="text-neutrals-700 mb-4">Kurz prüfen und bestätigen. Danach werden die Ergebnisse erzeugt.</p>
+                <div className="rounded-2xl border p-4 bg-neutrals-0">
+                  <div className="text-small text-neutrals-500 mb-1">Beruflicher Hintergrund</div>
+                  <div className="mb-3">{basics.background || "—"}</div>
+                  <div className="text-small text-neutrals-500 mb-1">Aktuelle Rolle</div>
+                  <div className="mb-3">{basics.current || "—"}</div>
+                  <div className="text-small text-neutrals-500 mb-1">Ziele/Interessen</div>
+                  <div className="whitespace-pre-wrap">{basics.goals || "—"}</div>
+                </div>
+                <div className="flex justify-between pt-6">
+                  <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl border">
+                    Zurück
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await upsertSession({ step: 3, basics });
+                      setStep(3);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+                  >
+                    Weiter
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {step === 3 && (
+              <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-10 flex flex-col items-center text-center">
+                <h2 className="text-lg font-semibold mb-6">Schritt 3: Ergebnisse generieren</h2>
+
                 <button
-                  onClick={async () => {
-                    await upsertSession({ step: 2, basics });
-                    setStep(2);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
+                  type="button"
+                  disabled={loading}
+                  onClick={generate}
+                  className={cls(
+                    "group relative inline-flex items-center justify-center w-full max-w-md h-16",
+                    "rounded-2xl bg-primary-500 text-[#2C2C2C] font-semibold text-[18px]",
+                    "transition-all duration-150 ease-out shadow-elevation2 hover:shadow-elevation3",
+                    "active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60",
+                    loading && "opacity-80 cursor-not-allowed",
+                  )}
                 >
-                  Weiter
+                  <span className="pointer-events-none">{loading ? "Generiere…" : "Ergebnisse generieren"}</span>
+                  {/* subtle click ripple */}
+                  <span className="absolute inset-0 rounded-2xl opacity-0 group-active:opacity-100 bg-white/20 transition-opacity" />
+                  {loading && (
+                    <span className="absolute right-4 h-5 w-5 border-2 border-[#2C2C2C]/40 border-t-[#2C2C2C] rounded-full animate-spin" />
+                  )}
                 </button>
-              </div>
-            </section>
-          )}
 
-          {step === 2 && (
-            <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
-              <h2 className="text-lg font-semibold mb-2">Schritt 2: Bestätigung</h2>
-              <p className="text-neutrals-700 mb-4">Kurz prüfen und bestätigen. Danach werden die Ergebnisse erzeugt.</p>
-              <div className="rounded-2xl border p-4 bg-neutrals-0">
-                <div className="text-small text-neutrals-500 mb-1">Beruflicher Hintergrund</div>
-                <div className="mb-3">{basics.background || "—"}</div>
-                <div className="text-small text-neutrals-500 mb-1">Aktuelle Rolle</div>
-                <div className="mb-3">{basics.current || "—"}</div>
-                <div className="text-small text-neutrals-500 mb-1">Ziele/Interessen</div>
-                <div className="whitespace-pre-wrap">{basics.goals || "—"}</div>
-              </div>
-              <div className="flex justify-between pt-6">
-                <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl border">Zurück</button>
-                <button
-                  onClick={async () => {
-                    await upsertSession({ step: 3, basics });
-                    setStep(3);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
-                >
-                  Weiter
-                </button>
-              </div>
-            </section>
-          )}
+                <div className="mt-8 w-full max-w-3xl text-left">
+                  {results && (
+                    <div className="rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 overflow-auto">
+                      <pre className="text-small leading-relaxed whitespace-pre-wrap">{JSON.stringify(results, null, 2)}</pre>
+                    </div>
+                  )}
+                  {!results && !loading && (
+                    <p className="text-neutrals-600">Klicke auf „Ergebnisse generieren“, um die Demo‑Ausgabe zu sehen.</p>
+                  )}
+                </div>
 
-          {step === 3 && (
-            <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-10 flex flex-col items-center text-center">
-              <h2 className="text-lg font-semibold mb-6">Schritt 3: Ergebnisse generieren</h2>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={generate}
-                className={cls(
-                  "group relative inline-flex items-center justify-center w-full max-w-md h-16",
-                  "rounded-2xl bg-primary-500 text-[#2C2C2C] font-semibold text-[18px]",
-                  "transition-all duration-150 ease-out shadow-elevation2 hover:shadow-elevation3",
-                  "active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60",
-                  loading && "opacity-80 cursor-not-allowed",
-                )}
-              >
-                <span className="pointer-events-none">{loading ? "Generiere…" : "Ergebnisse generieren"}</span>
-                {/* subtle click ripple */}
-                <span className="absolute inset-0 rounded-2xl opacity-0 group-active:opacity-100 bg-white/20 transition-opacity" />
-                {loading && (
-                  <span className="absolute right-4 h-5 w-5 border-2 border-[#2C2C2C]/40 border-t-[#2C2C2C] rounded-full animate-spin" />
-                )}
-              </button>
-
-              <div className="mt-8 w-full max-w-3xl text-left">
-                {results && (
-                  <div className="rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 overflow-auto">
-                    <pre className="text-small leading-relaxed whitespace-pre-wrap">{JSON.stringify(results, null, 2)}</pre>
+                <div className="flex justify-between w-full max-w-3xl pt-8">
+                  <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">
+                    Zurück
+                  </button>
+                  <div className="text-small text-neutrals-500 self-center">
+                    {saving === "saving" ? "Speichere…" : "Gespeichert"}
                   </div>
-                )}
-                {!results && !loading && (
-                  <p className="text-neutrals-600">Klicke auf „Ergebnisse generieren“, um die Demo‑Ausgabe zu sehen.</p>
-                )}
-              </div>
+                </div>
+              </section>
+            )}
+          </div>
 
-              <div className="flex justify-between w-full max-w-3xl pt-8">
-                <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">Zurück</button>
-                <div className="text-small text-neutrals-500 self-center">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
-              </div>
-            </section>
-          )}
+          <aside className="w-80 flex-shrink-0">
+            <ChatWindow userId={userId} sessionId={sessionId} />
+          </aside>
         </div>
       )}
     </main>
