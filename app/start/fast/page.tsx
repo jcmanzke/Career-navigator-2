@@ -1,11 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
+import VoiceRecorder from "@/app/components/VoiceRecorder";
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
+}
+
+function append(base: string, text: string) {
+  const sep = base && !base.endsWith(" ") ? " " : "";
+  return (base + sep + text).trimStart();
 }
 
 function ProcessOverview({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
@@ -51,7 +57,15 @@ function ProcessOverview({ current, onSelect }: { current: number; onSelect?: (n
   );
 }
 
-function ChatWindow({ userId, sessionId }: { userId: string | null; sessionId: string | null }) {
+function ChatWindow({
+  userId,
+  sessionId,
+  requestVoice,
+}: {
+  userId: string | null;
+  sessionId: string | null;
+  requestVoice: (cb: (text: string) => void) => void;
+}) {
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [input, setInput] = useState("");
 
@@ -107,6 +121,13 @@ function ChatWindow({ userId, sessionId }: { userId: string | null; sessionId: s
           onChange={(e) => setInput(e.target.value)}
         />
         <button
+          type="button"
+          onClick={() => requestVoice((t) => setInput((p) => append(p, t)))}
+          className="px-3 py-2 rounded-xl border"
+        >
+          🎤
+        </button>
+        <button
           type="submit"
           className="px-4 py-2 rounded-xl bg-primary-500 text-[#2C2C2C] font-semibold"
         >
@@ -132,6 +153,12 @@ export default function FastTrack() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [basics, setBasics] = useState<Basics>({ background: "", current: "", goals: "" });
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
+  const voiceCb = useRef<(t: string) => void>(() => {});
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const requestVoice = (cb: (text: string) => void) => {
+    voiceCb.current = cb;
+    setVoiceOpen(true);
+  };
 
   useEffect(() => {
     const id = step === 0 ? "intro" : `step-${step}`;
@@ -257,7 +284,13 @@ export default function FastTrack() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-8">
+    <>
+      <VoiceRecorder
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        onResult={(t) => voiceCb.current(t)}
+      />
+      <main className="min-h-screen px-4 py-8">
       {step === 0 && (
         <section className="max-w-3xl mx-auto rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
           <h1 className="font-display text-neutrals-900 text-[28px] md:text-[32px] font-semibold">Fast Track</h1>
@@ -295,25 +328,64 @@ export default function FastTrack() {
                 <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
                 <p className="text-neutrals-700 mb-4">Kurze Angaben, damit wir eine schnelle Einschätzung erstellen können.</p>
                 <div className="space-y-3">
-                  <input
-                    className="w-full h-12 px-4 rounded-2xl border border-accent-700"
-                    placeholder="Beruflicher Hintergrund"
-                    value={basics.background}
-                    onChange={(e) => setBasics((b) => ({ ...b, background: e.target.value }))}
-                  />
-                  <input
-                    className="w-full h-12 px-4 rounded-2xl border border-accent-700"
-                    placeholder="Aktuelle Rolle"
-                    value={basics.current}
-                    onChange={(e) => setBasics((b) => ({ ...b, current: e.target.value }))}
-                  />
-                  <textarea
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-2xl border border-accent-700"
-                    placeholder="Ziele/Interessen (kurz)"
-                    value={basics.goals}
-                    onChange={(e) => setBasics((b) => ({ ...b, goals: e.target.value }))}
-                  />
+                  <div className="relative">
+                    <input
+                      className="w-full h-12 px-4 pr-10 rounded-2xl border border-accent-700"
+                      placeholder="Beruflicher Hintergrund"
+                      value={basics.background}
+                      onChange={(e) => setBasics((b) => ({ ...b, background: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        requestVoice((t) =>
+                          setBasics((b) => ({ ...b, background: append(b.background, t) }))
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xl"
+                    >
+                      🎤
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      className="w-full h-12 px-4 pr-10 rounded-2xl border border-accent-700"
+                      placeholder="Aktuelle Rolle"
+                      value={basics.current}
+                      onChange={(e) => setBasics((b) => ({ ...b, current: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        requestVoice((t) =>
+                          setBasics((b) => ({ ...b, current: append(b.current, t) }))
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xl"
+                    >
+                      🎤
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      rows={4}
+                      className="w-full px-4 py-3 pr-10 rounded-2xl border border-accent-700"
+                      placeholder="Ziele/Interessen (kurz)"
+                      value={basics.goals}
+                      onChange={(e) => setBasics((b) => ({ ...b, goals: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        requestVoice((t) =>
+                          setBasics((b) => ({ ...b, goals: append(b.goals, t) }))
+                        )
+                      }
+                      className="absolute right-3 top-3 text-xl"
+                    >
+                      🎤
+                    </button>
+                  </div>
                 </div>
                 <div className="flex justify-end pt-6">
                   <button
@@ -406,10 +478,15 @@ export default function FastTrack() {
           </div>
 
           <aside className="w-80 flex-shrink-0">
-            <ChatWindow userId={userId} sessionId={sessionId} />
+            <ChatWindow
+              userId={userId}
+              sessionId={sessionId}
+              requestVoice={(cb) => requestVoice(cb)}
+            />
           </aside>
         </div>
       )}
-    </main>
+      </main>
+    </>
   );
 }
