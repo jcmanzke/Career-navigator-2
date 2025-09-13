@@ -135,7 +135,7 @@ export default function FastTrack() {
     return () => clearTimeout(t);
   }, [basics, userId, step, upsertSession]);
 
-  // Dummy webhook results we will replace later
+  // Fallback results used if webhook fails
   const dummyData = useMemo(
     () => ({
       summary: "Vorläufige Ergebnisse des Fast-Track Flows",
@@ -155,12 +155,31 @@ export default function FastTrack() {
   const generate = async () => {
     setLoading(true);
     setResults(null);
-    // Simulate request/stream. Later replaced by webhook handling.
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await fetch(
+        "https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, sessionId, basics }),
+        },
+      );
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { summary: text };
+      }
+      setResults(data);
+      upsertSession({ results: data });
+    } catch (e) {
+      console.error(e);
       setResults(dummyData);
       upsertSession({ results: dummyData });
-    }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
