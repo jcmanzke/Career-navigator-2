@@ -64,8 +64,7 @@ export default function Sidebar() {
   const itemBase =
     "w-full flex items-center gap-3 rounded-3xl px-3 py-2 text-neutrals-900 hover:bg-primary-500/70 focus-visible:bg-primary-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
-  const labelCls = (collapsed: boolean, mobileOpen: boolean) =>
-    `${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'}`;
+  const labelCls = (collapsed: boolean) => (collapsed ? 'hidden' : 'inline');
 
   return (
     <>
@@ -83,16 +82,16 @@ export default function Sidebar() {
         aria-label="Sidebar navigation"
         className={
           `${collapsed ? "md:w-16" : "md:w-60"} ` +
-          `shrink-0 border-r border-accent-700 bg-neutrals-50/70 backdrop-blur-md px-2 py-3 flex flex-col min-h-screen overflow-y-auto ` +
+          `shrink-0 border-r border-accent-700 bg-neutrals-50/70 backdrop-blur-md px-2 py-3 flex flex-col h-screen ` +
           // Mobile off-canvas behavior
-          `fixed inset-y-0 left-0 z-50 w-64 transform transition-transform md:static md:translate-x-0 ` +
+          `fixed inset-y-0 left-0 z-50 w-64 transform transition-transform md:sticky md:top-0 md:inset-y-auto md:translate-x-0 ` +
           (mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0")
         }
         role="navigation"
       >
         <div className="flex items-center justify-between px-1">
           {/* Title */}
-          <span className={`${mobileOpen ? 'inline' : 'hidden'} md:${collapsed ? 'hidden' : 'inline'} font-semibold text-neutrals-900`}>Menu</span>
+          <span className={`${collapsed ? 'hidden' : 'inline'} font-semibold text-neutrals-900`}>Menu</span>
           {/* Collapse toggle (desktop) and Close (mobile) */}
           <div className="flex items-center gap-2">
             <button
@@ -124,7 +123,7 @@ export default function Sidebar() {
             title={collapsed ? 'Home' : undefined}
           >
             <Icon label="Home" path="M3 12l9-7 9 7v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-8z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Home</span>
+            <span className={labelCls(collapsed)}>Home</span>
           </Link>
 
           <button
@@ -135,7 +134,7 @@ export default function Sidebar() {
             title={collapsed ? 'Resources' : undefined}
           >
             <Icon label="Resources" path="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Resources</span>
+            <span className={labelCls(collapsed)}>Resources</span>
           </button>
 
           <button
@@ -146,7 +145,7 @@ export default function Sidebar() {
             title={collapsed ? 'Quick Test' : undefined}
           >
             <Icon label="Quick Test" path="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5h-2v6l5 3 .9-1.5-3.9-2.3V7z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Quick Test</span>
+            <span className={labelCls(collapsed)}>Quick Test</span>
           </button>
 
           <button
@@ -157,7 +156,7 @@ export default function Sidebar() {
             title={collapsed ? 'Help' : undefined}
           >
             <Icon label="Help" path="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0-2a1 1 0 01-1-1c0-2 3-2 3-5a3 3 0 10-6 0H6a6 6 0 1112 0c0 4-4 4-4 6a1 1 0 01-1 1z" stroke />
-            <span className={labelCls(collapsed, mobileOpen)}>Help</span>
+            <span className={labelCls(collapsed)}>Help</span>
           </button>
         </nav>
 
@@ -178,7 +177,7 @@ export default function Sidebar() {
               path="M17 8l4 4-4 4M21 12H10M4 4h7a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"
               stroke
             />
-            <span className={labelCls(collapsed, mobileOpen)}>Log out</span>
+            <span className={labelCls(collapsed)}>Log out</span>
           </button>
         </div>
       </aside>
