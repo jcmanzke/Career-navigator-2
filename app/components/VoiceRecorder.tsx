@@ -61,7 +61,9 @@ export default function VoiceRecorder({ open, onClose, onResult }: Props) {
           sum += v * v;
         }
         const rms = Math.sqrt(sum / dataArray.length);
-        setVolume(rms);
+        // amplify a bit so that normal speech lights up most bars
+        const level = Math.min(1, rms * 5);
+        setVolume(level);
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
@@ -112,7 +114,7 @@ export default function VoiceRecorder({ open, onClose, onResult }: Props) {
 
   if (!open) return null;
 
-  const bars = 32;
+  const bars = 20;
   const active = Math.round(volume * bars);
 
   return (
@@ -128,9 +130,10 @@ export default function VoiceRecorder({ open, onClose, onResult }: Props) {
           {Array.from({ length: bars }).map((_, i) => {
             let color = "bg-gray-200";
             if (i < active) {
-              if (i < bars * 0.5) color = "bg-red-500";
-              else if (i < bars * 0.75) color = "bg-orange-400";
-              else color = "bg-yellow-300";
+              const pct = i / bars;
+              if (pct < 0.5) color = "bg-green-400";
+              else if (pct < 0.8) color = "bg-yellow-300";
+              else color = "bg-red-500";
             }
             return <div key={i} className={`w-1 flex-1 ${color}`}></div>;
           })}

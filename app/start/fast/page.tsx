@@ -92,7 +92,7 @@ function ChatWindow({
   }, [input, userId, sessionId]);
 
   return (
-    <div className="flex flex-col h-full rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-4">
+    <div className="flex flex-col h-full w-full rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-4">
       <div className="flex-1 overflow-y-auto space-y-2">
         {messages.map((m, i) => (
           <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
@@ -108,14 +108,14 @@ function ChatWindow({
         ))}
       </div>
       <form
-        className="pt-2 flex gap-2"
+        className="pt-2 flex w-full gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           send();
         }}
       >
         <input
-          className="flex-1 h-10 px-3 rounded-xl border border-accent-700"
+          className="flex-1 min-w-0 h-10 px-3 rounded-xl border border-accent-700"
           placeholder="Frage stellen..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -311,8 +311,8 @@ export default function FastTrack() {
       )}
 
       {step >= 1 && (
-        <div className="max-w-6xl mx-auto flex gap-6">
-          <aside className="w-40 flex-shrink-0">
+        <div className="max-w-6xl mx-auto flex flex-col gap-6 lg:flex-row">
+          <aside className="w-full lg:w-40 flex-shrink-0">
             <ProcessOverview
               current={step}
               onSelect={(n) => {
@@ -477,7 +477,7 @@ export default function FastTrack() {
             )}
           </div>
 
-          <aside className="w-80 flex-shrink-0">
+          <aside className="w-full lg:w-96 flex-shrink-0">
             <ChatWindow
               userId={userId}
               sessionId={sessionId}
