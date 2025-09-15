@@ -76,6 +76,7 @@ function VoiceRecorderModal({
   const audioStreamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -85,6 +86,7 @@ function VoiceRecorderModal({
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioStreamRef.current = stream;
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = ctx;
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256; // smaller for snappier updates
@@ -130,6 +132,8 @@ function VoiceRecorderModal({
       mediaRecorderRef.current = null;
       audioStreamRef.current = null;
       analyserRef.current = null;
+      try { audioCtxRef.current?.close(); } catch {}
+      audioCtxRef.current = null;
       setRecording(false);
       setPaused(false);
       setLevel(0);
@@ -181,9 +185,21 @@ function VoiceRecorderModal({
         method: "POST",
         body: fd,
       });
-      // Prefer the important value from the `text` header
+      // Prefer the important value from the `text` header; if JSON, extract .output
       const headerText = res.headers.get("text");
-      const text = headerText ?? (await res.text());
+      const bodyText = headerText ?? (await res.text());
+      const extractOutput = (txt: string) => {
+        try {
+          const parsed = JSON.parse(txt);
+          if (Array.isArray(parsed)) {
+            const outs = parsed.map((o) => (o && typeof o === 'object' ? (o as any).output : null)).filter(Boolean);
+            if (outs.length) return outs.join("\n\n");
+          }
+          if (parsed && typeof parsed === 'object' && (parsed as any).output) return (parsed as any).output as string;
+        } catch {}
+        return txt;
+      };
+      const text = extractOutput(bodyText);
       onSaved({ field, text, ok: true });
     } catch (e) {
       onSaved({ field, text: "Übertragung fehlgeschlagen.", ok: false });
@@ -200,8 +216,8 @@ function VoiceRecorderModal({
         </div>
         <p className="text-small text-neutrals-600 mb-3">Sprich jetzt. Du kannst pausieren, fortsetzen oder abbrechen.</p>
 
-        <div className="h-3 w-full bg-neutrals-200 rounded-full overflow-hidden mb-4">
-          <div className="h-full bg-primary-500 transition-[width]" style={{ width: `${Math.round(level * 100)}%` }} />
+        <div className="h-5 w-full bg-neutrals-200 rounded-full overflow-hidden mb-4">
+          <div className="h-full bg-primary-500 transition-[width] duration-75" style={{ width: `${Math.round(level * 100)}%` }} />
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -409,15 +425,6 @@ export default function FastTrack() {
                           <div className="text-small text-neutrals-600 line-clamp-2">
                             {(basics as any)[item.key] ? (basics as any)[item.key] : "Noch keine Eingabe"}
                           </div>
-                          {sentOk[item.key] && (
-                            <div className="flex items-center gap-2 text-green-600 text-small">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="12" cy="12" r="10" fill="#22C55E"/>
-                                <path d="M8 12.5l2.5 2.5L16 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                              <span>Übertragung erfolgreich - sprich einfach weiter, wenn dir noch weitere wichtige Punkte einfallen.</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                       <button
@@ -428,6 +435,15 @@ export default function FastTrack() {
                         Aufnehmen
                       </button>
                     </div>
+                    {sentOk[item.key] && (
+                      <div className="mt-3 w-full rounded-xl bg-green-50 text-green-700 border border-green-200 px-3 py-2 flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="12" r="10" fill="#22C55E"/>
+                          <path d="M8 12.5l2.5 2.5L16 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span>Übertragung erfolgreich - sprich einfach weiter, wenn dir noch weitere wichtige Punkte einfallen.</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
