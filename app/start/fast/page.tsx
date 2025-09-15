@@ -58,12 +58,14 @@ function VoiceRecorderModal({
   field,
   label,
   onSaved,
+  userId,
 }: {
   open: boolean;
   onClose: () => void;
   field: FieldKey;
   label: string;
-  onSaved: (opts: { field: FieldKey; text: string }) => void;
+  onSaved: (opts: { field: FieldKey; text: string; ok?: boolean }) => void;
+  userId?: string | null;
 }) {
   const [recording, setRecording] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -85,21 +87,23 @@ function VoiceRecorderModal({
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
+        analyser.fftSize = 256; // smaller for snappier updates
+        analyser.smoothingTimeConstant = 0.05; // more responsive
         source.connect(analyser);
         analyserRef.current = analyser;
         const data = new Uint8Array(analyser.frequencyBinCount);
         const tick = () => {
           if (stopped) return;
           analyser.getByteTimeDomainData(data);
-          // simple amplitude estimate
-          let sum = 0;
+          // Peak amplitude estimate, boosted for sensitivity
+          let peak = 0;
           for (let i = 0; i < data.length; i++) {
-            const v = (data[i] - 128) / 128; // -1..1
-            sum += v * v;
+            const v = Math.abs((data[i] - 128) / 128); // 0..1
+            if (v > peak) peak = v;
           }
-          const rms = Math.sqrt(sum / data.length); // 0..~1
-          setLevel(Math.min(1, rms * 2));
+          const boosted = Math.min(1, peak * 4.5); // increase sensitivity
+          // light smoothing to avoid jitter while keeping responsiveness
+          setLevel((prev) => prev * 0.4 + boosted * 0.6);
           rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
@@ -166,16 +170,23 @@ function VoiceRecorderModal({
     fd.append("file", blob, `${field}-${Date.now()}.webm`);
     fd.append("field", field);
     fd.append("label", label);
+    // Required routing info for backend
+    const inputField = field === "background" ? "Ausbildung" : field === "current" ? "Aktuelle Rolle" : "Ziele und Interessen";
+    fd.append("identifier", `voice-${field}-${Date.now()}`);
+    fd.append("inputField", inputField);
+    if (userId) fd.append("userId", userId);
     // Send to webhook – server should return a concise summary (markdown allowed)
     try {
       const res = await fetch("https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620", {
         method: "POST",
         body: fd,
       });
-      const text = await res.text();
-      onSaved({ field, text });
+      // Prefer the important value from the `text` header
+      const headerText = res.headers.get("text");
+      const text = headerText ?? (await res.text());
+      onSaved({ field, text, ok: true });
     } catch (e) {
-      onSaved({ field, text: "Übertragung fehlgeschlagen." });
+      onSaved({ field, text: "Übertragung fehlgeschlagen.", ok: false });
     }
   };
 
@@ -230,6 +241,7 @@ export default function FastTrack() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
+  const [sentOk, setSentOk] = useState<Record<FieldKey, boolean>>({ background: false, current: false, goals: false });
 
   useEffect(() => {
     const id = step === 0 ? "intro" : `step-${step}`;
@@ -384,17 +396,28 @@ export default function FastTrack() {
               <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
               <p className="text-neutrals-700 mb-4">Statt Tippen: per Stimme aufnehmen. Jede Eingabe öffnet ein Pop‑up zur Sprachaufnahme.</p>
               <div className="space-y-4">
-                {([
+                {(([ 
                   { key: "background", label: "Ausbildung und beruflicher Hintergrund" },
                   { key: "current", label: "Aktuelle Rolle" },
                   { key: "goals", label: "Ziele und Interessen" },
-                ] as { key: FieldKey; label: string }[]).map((item) => (
+                ] as { key: FieldKey; label: string }[])).map((item) => (
                   <div key={item.key} className="rounded-2xl border p-4 bg-neutrals-0">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="font-medium">{item.label}</div>
-                        <div className="text-small text-neutrals-600 mt-1 line-clamp-2">
-                          {(basics as any)[item.key] ? (basics as any)[item.key] : "Noch keine Eingabe"}
+                        <div className="mt-1 space-y-1">
+                          <div className="text-small text-neutrals-600 line-clamp-2">
+                            {(basics as any)[item.key] ? (basics as any)[item.key] : "Noch keine Eingabe"}
+                          </div>
+                          {sentOk[item.key] && (
+                            <div className="flex items-center gap-2 text-green-600 text-small">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="10" fill="#22C55E"/>
+                                <path d="M8 12.5l2.5 2.5L16 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              <span>Übertragung erfolgreich - sprich einfach weiter, wenn dir noch weitere wichtige Punkte einfallen.</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <button
@@ -549,9 +572,11 @@ export default function FastTrack() {
         field={(recField || "background") as FieldKey}
         label={recField === "current" ? "Aktuelle Rolle" : recField === "goals" ? "Ziele und Interessen" : "Ausbildung und beruflicher Hintergrund"}
         onClose={() => setRecField(null)}
-        onSaved={({ field, text }) => {
+        onSaved={({ field, text, ok }) => {
           setBasics((b) => ({ ...b, [field]: text } as Basics));
+          if (ok) setSentOk((s) => ({ ...s, [field]: true }));
         }}
+        userId={userId}
       />
     </main>
   );
