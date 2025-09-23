@@ -59,6 +59,9 @@ function VoiceRecorderModal({
   label,
   onSaved,
   userId,
+  threadId,
+  turn,
+  snapshot,
 }: {
   open: boolean;
   onClose: () => void;
@@ -66,6 +69,9 @@ function VoiceRecorderModal({
   label: string;
   onSaved: (opts: { field: FieldKey; text: string; ok?: boolean }) => void;
   userId?: string | null;
+  threadId?: string;
+  turn?: number;
+  snapshot?: Basics;
 }) {
   const [recording, setRecording] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -179,6 +185,16 @@ function VoiceRecorderModal({
     fd.append("identifier", `voice-${field}-${Date.now()}`);
     fd.append("inputField", inputField);
     if (userId) fd.append("userId", userId);
+    if (threadId) fd.append("threadId", threadId);
+    if (typeof turn === 'number') fd.append("turn", String(turn));
+    fd.append("mode", "append");
+    // Always include the current Step 2 snapshot so the agent sees all answers
+    if (snapshot) {
+      try { fd.append("step2", JSON.stringify(snapshot)); } catch {}
+      if (snapshot.background) fd.append("step2Background", snapshot.background);
+      if (snapshot.current) fd.append("step2Current", snapshot.current);
+      if (snapshot.goals) fd.append("step2Goals", snapshot.goals);
+    }
     // Send to webhook – server should return a concise summary (markdown allowed)
     try {
       const res = await fetch("https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620", {
@@ -258,6 +274,8 @@ export default function FastTrack() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
   const [sentOk, setSentOk] = useState<Record<FieldKey, boolean>>({ background: false, current: false, goals: false });
+  const [threadIds, setThreadIds] = useState<Record<FieldKey, string>>({ background: "", current: "", goals: "" });
+  const [turns, setTurns] = useState<Record<FieldKey, number>>({ background: 0, current: 0, goals: 0 });
 
   useEffect(() => {
     const id = step === 0 ? "intro" : `step-${step}`;
@@ -300,6 +318,16 @@ export default function FastTrack() {
       }
     })();
   }, []);
+
+  // Derive stable thread IDs per field from session
+  useEffect(() => {
+    const base = `fast:${sessionId || 'anon'}`;
+    setThreadIds({
+      background: `${base}:background`,
+      current: `${base}:current`,
+      goals: `${base}:goals`,
+    });
+  }, [sessionId]);
 
   const upsertSession = useCallback(
     async (patch: Partial<{ step: number; basics: Basics; results: any }>) => {
@@ -590,9 +618,15 @@ export default function FastTrack() {
         onClose={() => setRecField(null)}
         onSaved={({ field, text, ok }) => {
           setBasics((b) => ({ ...b, [field]: text } as Basics));
-          if (ok) setSentOk((s) => ({ ...s, [field]: true }));
+          if (ok) {
+            setSentOk((s) => ({ ...s, [field]: true }));
+            setTurns((t) => ({ ...t, [field]: (t[field] ?? 0) + 1 }));
+          }
         }}
         userId={userId}
+        threadId={recField ? threadIds[recField] : undefined}
+        turn={recField ? turns[recField] : undefined}
+        snapshot={basics}
       />
     </main>
   );

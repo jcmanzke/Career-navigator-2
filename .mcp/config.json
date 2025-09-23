@@ -1,0 +1,14 @@
+{
+  "services": [
+    {
+      "id": "supabase",
+      "binary": "supabase",
+      "args": ["mcp", "supabase"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_38a33bc74c6c105f6db13f9296517e418d4d8282",
+        "SUPABASE_URL": "https://wpunshetagnnmqfutwcw.supabase.co",
+        "SUPABASE_PROJECT_ID": "wpunshetagnnmqfutwcw"
+      }
+    }
+  ]
+}

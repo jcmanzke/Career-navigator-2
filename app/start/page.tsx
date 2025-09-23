@@ -40,25 +40,33 @@ export default function StartPage() {
       {/* Track cards */}
       <section className="mx-auto mt-8 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
         {/* Fast Track Card (container not clickable) */}
-        <div className="relative rounded-3xl bg-neutrals-100 p-6 md:p-8 border border-accent-700 focus-within:ring-4 focus-within:ring-primary-500/40 min-h-80 flex flex-col">
-          <div className="flex items-start justify-between">
-            <h3 className="font-semibold text-neutrals-900 text-[20px]">Fast Track</h3>
-            <span className="rounded-full bg-neutrals-200 px-3 py-1 text-small text-neutrals-800" aria-label="Estimated time 10 to 15 minutes">10–15 min</span>
-          </div>
-          <ul className="mt-3 list-disc pl-5 text-small text-neutrals-700 space-y-1">
-            <li>3 role ideas tailored to you</li>
-            <li>2 skills to build next</li>
-            <li>1 action you can take today</li>
-          </ul>
-          <div className="mt-auto pt-4">
-            <Link
-              href="/start/fast"
-              aria-label="Start Fast Track"
-              className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
-            >
-              Start Fast Track
-            </Link>
-            <p className="mt-3 text-xs text-neutrals-600">Your data is private. You control what’s saved.</p>
+        <div className="relative min-h-80 overflow-hidden rounded-3xl border border-accent-700 focus-within:ring-4 focus-within:ring-primary-500/40">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/pexels-lapography-2863161-4426389.jpg')" }}
+          />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/50" />
+          <div className="relative flex min-h-80 flex-col p-6 md:p-8">
+            <div className="flex items-start justify-between text-white">
+              <h3 className="font-semibold text-[20px]">Fast Track</h3>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-small text-white" aria-label="Estimated time 10 to 15 minutes">10–15 min</span>
+            </div>
+            <ul className="mt-3 list-disc pl-5 text-small text-white/90 space-y-1">
+              <li>3 role ideas tailored to you</li>
+              <li>2 skills to build next</li>
+              <li>1 action you can take today</li>
+            </ul>
+            <div className="mt-auto pt-4">
+              <Link
+                href="/start/fast"
+                aria-label="Start Fast Track"
+                className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+              >
+                Start Fast Track
+              </Link>
+              <p className="mt-3 text-xs text-white/80">Your data is private. You control what’s saved.</p>
+            </div>
           </div>
         </div>
 
