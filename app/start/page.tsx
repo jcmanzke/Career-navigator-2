@@ -89,10 +89,10 @@ export default function StartPage() {
               <h3 className="font-semibold text-[20px] text-white">Deep Analysis</h3>
               <span className="rounded-full bg-white/20 px-3 py-1 text-small text-white" aria-label="Estimated time 45 to 60 minutes">45–60 min</span>
             </div>
-            <p className="mt-3 text-small text-white/90 max-w-sm">
+            <p className="mt-3 text-small text-white/90 max-w-xs">
               Dive into your stories to surface themes, map long-term paths, and shape a tailored development plan.
             </p>
-            <div className="mt-auto pt-4 space-y-3">
+            <div className="mt-auto pt-4">
               <Link
                 href={deepAnalysisButtonHref}
                 aria-label={deepAnalysisButtonLabel}
@@ -100,7 +100,7 @@ export default function StartPage() {
               >
                 {deepAnalysisButtonLabel}
               </Link>
-              <p className="text-xs text-white/80">Your data is private. You control what’s saved.</p>
+              <p className="mt-3 text-xs text-white/80">Your data is private. You control what’s saved.</p>
             </div>
           </div>
         </div>
