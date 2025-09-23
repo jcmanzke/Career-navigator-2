@@ -49,14 +49,12 @@ export default function StartPage() {
           <div aria-hidden="true" className="absolute inset-0 bg-black/50" />
           <div className="relative flex min-h-80 flex-col p-6 md:p-8">
             <div className="flex items-start justify-between text-white">
-              <h3 className="font-semibold text-[20px]">Fast Track</h3>
+              <h3 className="font-semibold text-[20px] text-white">Fast Track</h3>
               <span className="rounded-full bg-white/20 px-3 py-1 text-small text-white" aria-label="Estimated time 10 to 15 minutes">10–15 min</span>
             </div>
-            <ul className="mt-3 list-disc pl-5 text-small text-white/90 space-y-1">
-              <li>3 role ideas tailored to you</li>
-              <li>2 skills to build next</li>
-              <li>1 action you can take today</li>
-            </ul>
+            <p className="mt-3 text-small text-white/90 max-w-xs">
+              Get 3 tailored roles, skill priorities, and an action you can take right away.
+            </p>
             <div className="mt-auto pt-4">
               <Link
                 href="/start/fast"
@@ -71,35 +69,41 @@ export default function StartPage() {
         </div>
 
         {/* Deep Analysis Card (container not clickable) */}
-        <div className="relative rounded-3xl bg-neutrals-100 p-6 md:p-8 border border-accent-700 focus-within:ring-4 focus-within:ring-primary-500/40 min-h-80 flex flex-col">
-          <div className="flex items-start justify-between">
-            <h3 className="font-semibold text-neutrals-900 text-[20px]">Deep Analysis</h3>
-            <span className="rounded-full bg-neutrals-200 px-3 py-1 text-small text-neutrals-800" aria-label="Estimated time 45 to 60 minutes">45–60 min</span>
-          </div>
-          <ul className="mt-3 list-disc pl-5 text-small text-neutrals-700 space-y-1">
-            <li>Themes & values from your stories</li>
-            <li>Personalized role paths</li>
-            <li>Development plan (in/outside company, freelance)</li>
-          </ul>
-          <div className="mt-auto pt-4">
-            <Link
-              href={hasServerProgress ? "#" : "/"}
-              aria-label="Start Deep Analysis"
-              className={`w-full inline-flex justify-center items-center gap-2 rounded-full px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60 ${hasServerProgress ? 'bg-neutrals-200 text-neutrals-600 line-through cursor-not-allowed' : 'bg-primary-500 text-[#2C2C2C]'}`}
-              tabIndex={hasServerProgress ? -1 : 0}
-            >
-              Start Deep Analysis
-            </Link>
-            {hasServerProgress && (
+        <div className="relative min-h-80 overflow-hidden rounded-3xl border border-accent-700 focus-within:ring-4 focus-within:ring-primary-500/40">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/pexels-lapography-2863161-4426389.jpg')" }}
+          />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/60" />
+          <div className="relative flex min-h-80 flex-col p-6 md:p-8">
+            <div className="flex items-start justify-between text-white">
+              <h3 className="font-semibold text-[20px] text-white">Deep Analysis</h3>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-small text-white" aria-label="Estimated time 45 to 60 minutes">45–60 min</span>
+            </div>
+            <p className="mt-3 text-small text-white/90 max-w-sm">
+              Dive into your stories to surface themes, map long-term paths, and shape a tailored development plan.
+            </p>
+            <div className="mt-auto pt-4 space-y-3">
               <Link
-                href={progress ? getResumeUrl(progress) : "/"}
-                aria-label="Continue Deep Analysis"
-                className="mt-3 w-full inline-flex justify-center items-center gap-2 rounded-full bg-primary-500 text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+                href={hasServerProgress ? "#" : "/"}
+                aria-label="Start Deep Analysis"
+                className={`w-full inline-flex justify-center items-center gap-2 rounded-full px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60 ${hasServerProgress ? 'bg-white/20 text-white/60 line-through cursor-not-allowed' : 'bg-primary-500 text-[#2C2C2C]'}`}
+                tabIndex={hasServerProgress ? -1 : 0}
               >
-                Continue Deep Analysis
+                Start Deep Analysis
               </Link>
-            )}
-            <p className="mt-3 text-xs text-neutrals-600">Your data is private. You control what’s saved.</p>
+              {hasServerProgress && (
+                <Link
+                  href={progress ? getResumeUrl(progress) : "/"}
+                  aria-label="Continue Deep Analysis"
+                  className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-white text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
+                >
+                  Continue Deep Analysis
+                </Link>
+              )}
+              <p className="text-xs text-white/80">Your data is private. You control what’s saved.</p>
+            </div>
           </div>
         </div>
       </section>
