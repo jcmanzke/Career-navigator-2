@@ -25,6 +25,14 @@ export default function StartPage() {
     check();
   }, []);
 
+  const deepAnalysisButtonLabel = hasServerProgress ? "Continue Deep Analysis" : "Start Deep Analysis";
+  const deepAnalysisButtonHref = hasServerProgress
+    ? (progress ? getResumeUrl(progress) : "/")
+    : "/";
+  const deepAnalysisButtonClasses = hasServerProgress
+    ? "bg-white text-[#2C2C2C]"
+    : "bg-primary-500 text-[#2C2C2C]";
+
   return (
     <main className="min-h-screen px-4 py-8 md:py-12">
       {/* Hero */}
@@ -44,7 +52,7 @@ export default function StartPage() {
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/pexels-lapography-2863161-4426389.jpg')" }}
+            style={{ backgroundImage: "url('/Fast track picture.jpg')" }}
           />
           <div aria-hidden="true" className="absolute inset-0 bg-black/50" />
           <div className="relative flex min-h-80 flex-col p-6 md:p-8">
@@ -73,7 +81,7 @@ export default function StartPage() {
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/pexels-lapography-2863161-4426389.jpg')" }}
+            style={{ backgroundImage: "url('/Deeo analysis picture.jpg')" }}
           />
           <div aria-hidden="true" className="absolute inset-0 bg-black/60" />
           <div className="relative flex min-h-80 flex-col p-6 md:p-8">
@@ -86,22 +94,12 @@ export default function StartPage() {
             </p>
             <div className="mt-auto pt-4 space-y-3">
               <Link
-                href={hasServerProgress ? "#" : "/"}
-                aria-label="Start Deep Analysis"
-                className={`w-full inline-flex justify-center items-center gap-2 rounded-full px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60 ${hasServerProgress ? 'bg-white/20 text-white/60 line-through cursor-not-allowed' : 'bg-primary-500 text-[#2C2C2C]'}`}
-                tabIndex={hasServerProgress ? -1 : 0}
+                href={deepAnalysisButtonHref}
+                aria-label={deepAnalysisButtonLabel}
+                className={`w-full inline-flex justify-center items-center gap-2 rounded-full px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60 ${deepAnalysisButtonClasses}`}
               >
-                Start Deep Analysis
+                {deepAnalysisButtonLabel}
               </Link>
-              {hasServerProgress && (
-                <Link
-                  href={progress ? getResumeUrl(progress) : "/"}
-                  aria-label="Continue Deep Analysis"
-                  className="w-full inline-flex justify-center items-center gap-2 rounded-full bg-white text-[#2C2C2C] px-4 py-2 text-small font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
-                >
-                  Continue Deep Analysis
-                </Link>
-              )}
               <p className="text-xs text-white/80">Your data is private. You control what’s saved.</p>
             </div>
           </div>
