@@ -261,8 +261,8 @@ function VoiceRecorderModal({
 }
 
 export default function FastTrack() {
-  // step: 0 = Intro (not part of progress), 1..3 are the steps
-  const [step, setStep] = useState<number>(0);
+  // step: 1..3 are the active screens; intro screen removed for faster start
+  const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -278,7 +278,7 @@ export default function FastTrack() {
   const [turns, setTurns] = useState<Record<FieldKey, number>>({ background: 0, current: 0, goals: 0 });
 
   useEffect(() => {
-    const id = step === 0 ? "intro" : `step-${step}`;
+    const id = `step-${Math.max(1, step)}`;
     saveProgress({ track: "fast", stepId: id, updatedAt: Date.now() });
   }, [step]);
 
@@ -298,7 +298,8 @@ export default function FastTrack() {
           .single();
         if (row) {
           setSessionId(row.id);
-          setStep(row.step ?? 1);
+          const nextStep = typeof row.step === "number" && row.step >= 1 ? row.step : 1;
+          setStep(nextStep);
           if (row.basics) setBasics({ background: row.basics.background || "", current: row.basics.current || "", goals: row.basics.goals || "" });
           if (row.results) setResults(row.results);
         } else {
@@ -310,7 +311,8 @@ export default function FastTrack() {
             .single();
           if (!error && created) {
             setSessionId(created.id);
-            setStep(created.step ?? 1);
+            const nextStep = typeof created.step === "number" && created.step >= 1 ? created.step : 1;
+            setStep(nextStep);
           }
         }
       } catch (e) {
@@ -412,25 +414,6 @@ export default function FastTrack() {
 
   return (
     <main className="min-h-screen px-4 py-8">
-      {step === 0 && (
-        <section className="max-w-3xl mx-auto rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
-          <h1 className="font-display text-neutrals-900 text-[28px] md:text-[32px] font-semibold">Fast Track</h1>
-          <p className="mt-2 text-neutrals-700">Kompakter Ablauf in drei Schritten.</p>
-          <ol className="list-decimal pl-5 text-body text-neutrals-700 space-y-1 mt-4">
-            <li>Basisinfos</li>
-            <li>Bestätigung</li>
-            <li>Ergebnisse generieren</li>
-          </ol>
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="mt-6 rounded-xl bg-[#1D252A] text-white px-4 py-2 text-small font-semibold hover:bg-primary-500 hover:text-neutrals-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500/60"
-          >
-            Starten
-          </button>
-        </section>
-      )}
-
       {step >= 1 && (
         <div className="max-w-4xl mx-auto space-y-6">
           <ProgressSteps3 current={step} onSelect={(n) => { setStep(n); upsertSession({ step: n }); }} />
