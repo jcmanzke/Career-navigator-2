@@ -114,9 +114,9 @@ function VoiceRecorderScreen({
           if (v > peak) peak = v;
         }
         const boosted = Math.min(1, peak * 3.5);
-        setLevel((prev) => prev * 0.85 + boosted * 0.15);
+        setLevel((prev) => prev * 0.8 + boosted * 0.2);
       } else {
-        setLevel((prev) => prev * 0.95);
+        setLevel((prev) => prev * 0.9);
       }
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -258,17 +258,19 @@ function VoiceRecorderScreen({
         try { recorder.requestData(); } catch {}
       }
       await stopRecorder();
-      for (let i = 0; i < 5 && chunksRef.current.length === 0; i += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 120));
+      for (let i = 0; i < 10 && chunksRef.current.length === 0; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      const mimeType = mediaRecorderRef.current?.mimeType || chunksRef.current[0]?.type || "audio/webm";
+      const blob = new Blob(chunksRef.current, { type: mimeType });
       if (!blob.size) {
         setError("Die Aufnahme war leer. Bitte versuche es erneut.");
         setUploading(false);
         return;
       }
       const fd = new FormData();
-      fd.append("file", blob, `${field}-${Date.now()}.webm`);
+      const fileName = `${field}-${Date.now()}.${mimeType.includes("mp4") ? "m4a" : "webm"}`;
+      fd.append("file", blob, fileName);
       fd.append("field", field);
       fd.append("label", label);
       const inputField = field === "background" ? "Ausbildung" : field === "current" ? "Aktuelle Rolle" : "Ziele und Interessen";
@@ -278,6 +280,7 @@ function VoiceRecorderScreen({
       if (threadId) fd.append("threadId", threadId);
       if (typeof turn === "number") fd.append("turn", String(turn));
       fd.append("mode", "append");
+      fd.append("mimeType", mimeType);
       if (snapshot) {
         try {
           fd.append("step2", JSON.stringify(snapshot));
@@ -324,7 +327,7 @@ function VoiceRecorderScreen({
 
   if (!open) return null;
 
-  const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.2 : 0.03);
+  const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.35 : 0.08);
   const primaryText = status === "recording" ? "Pause" : status === "paused" ? "Fortsetzen" : "Aufnehmen";
   const helperText = status === "recording"
     ? "Tippe, um die Aufnahme zu pausieren."
