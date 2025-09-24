@@ -253,8 +253,14 @@ function VoiceRecorderScreen({
     }
     setUploading(true);
     try {
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") {
+        try { recorder.requestData(); } catch {}
+      }
       await stopRecorder();
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      for (let i = 0; i < 5 && chunksRef.current.length === 0; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
       const blob = new Blob(chunksRef.current, { type: "audio/webm" });
       if (!blob.size) {
         setError("Die Aufnahme war leer. Bitte versuche es erneut.");
@@ -283,6 +289,7 @@ function VoiceRecorderScreen({
 
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
+        mode: "cors",
         headers: { [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
         body: fd,
       });
