@@ -84,6 +84,9 @@ function VoiceRecorderModal({
   const rafRef = useRef<number | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawRafRef = useRef<number | null>(null);
+  const dprRef = useRef<number>(1);
 
   useEffect(() => {
     if (!open) return;
@@ -147,6 +150,91 @@ function VoiceRecorderModal({
       setUploading(false);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !recording) return;
+    const canvas = canvasRef.current;
+    const analyser = analyserRef.current;
+    if (!canvas || !analyser) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const getDpr = () => (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
+
+    const resize = () => {
+      const dpr = getDpr();
+      dprRef.current = dpr;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    resize();
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", resize);
+    }
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    const draw = () => {
+      analyser.getByteTimeDomainData(data);
+      const dpr = dprRef.current;
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const sliceWidth = width / Math.max(1, data.length - 1);
+      const baseHeight = height * 0.6;
+      const amplitudeScale = height * 0.45;
+
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128 - 1; // -1..1
+        const y = baseHeight - v * amplitudeScale;
+        const x = i * sliceWidth;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, height);
+      ctx.closePath();
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, "rgba(8, 84, 145, 0.55)");
+      gradient.addColorStop(0.4, "rgba(24, 120, 205, 0.35)");
+      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(0, baseHeight);
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128 - 1;
+        const y = baseHeight - v * amplitudeScale;
+        const x = i * sliceWidth;
+        ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = "rgba(12, 63, 120, 0.9)";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      drawRafRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", resize);
+      }
+      if (drawRafRef.current) {
+        cancelAnimationFrame(drawRafRef.current);
+        drawRafRef.current = null;
+      }
+    };
+  }, [open, recording]);
 
   const onPauseResume = () => {
     const rec = mediaRecorderRef.current;
@@ -225,37 +313,74 @@ function VoiceRecorderModal({
   };
 
   if (!open) return null;
+  const outerRingScale = 1 + level * 0.45;
+  const innerRingScale = 1 + level * 0.25;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 p-0 md:p-6">
-      <div className="w-full md:max-w-md rounded-t-3xl md:rounded-2xl bg-white p-4 shadow-elevation3">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-semibold">{label}</h3>
-          <button onClick={onCancel} className="text-neutrals-600 text-sm">Schließen</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutrals-900/70 px-4 py-6">
+      <div className="relative w-full max-w-4xl overflow-hidden rounded-[32px] border border-accent-700 bg-neutrals-0 shadow-elevation3">
+        <div className="relative h-48 w-full overflow-hidden">
+          <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0D3559]/45 via-primary-500/15 to-transparent" />
         </div>
-        <p className="text-small text-neutrals-600 mb-3">Sprich jetzt. Du kannst pausieren, fortsetzen oder abbrechen.</p>
+        <div className="relative z-10 px-6 pb-8 pt-10 md:px-12 md:pb-12 md:pt-16">
+          <div className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary-500">Aufnahme läuft</p>
+            <h3 className="mt-2 text-[22px] font-semibold text-neutrals-900 md:text-[28px]">Erzähle frei über {typeof label === "string" ? label : String(label)}</h3>
+            <p className="mx-auto mt-3 max-w-2xl text-small text-neutrals-600">
+              Wir transkribieren automatisch – sprich so ausführlich wie du möchtest. Du kannst jederzeit pausieren oder senden.
+            </p>
+          </div>
 
-        <div className="h-5 w-full bg-neutrals-200 rounded-full overflow-hidden mb-4">
-          <div className="h-full bg-primary-500 transition-[width] duration-75" style={{ width: `${Math.round(level * 100)}%` }} />
-        </div>
+          <div className="mt-12 flex justify-center">
+            <div className="relative flex h-40 w-40 items-center justify-center md:h-48 md:w-48">
+              <span
+                className="absolute inset-0 rounded-full bg-primary-500/15 transition-transform duration-100 ease-out"
+                style={{ transform: `scale(${outerRingScale})` }}
+                aria-hidden="true"
+              />
+              <span
+                className="absolute inset-6 rounded-full bg-primary-500/25 transition-transform duration-100 ease-out"
+                style={{ transform: `scale(${innerRingScale})` }}
+                aria-hidden="true"
+              />
+              <span className="relative z-10 flex h-full w-full items-center justify-center rounded-full bg-[#1D252A] text-white shadow-lg">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3zm4-3a4 4 0 11-8 0V6a4 4 0 118 0v5z" fill="currentColor" />
+                  <path d="M7 11a1 1 0 10-2 0 7 7 0 006 6.93V20H9a1 1 0 100 2h6a1 1 0 100-2h-2v-2.07A7 7 0 0019 11a1 1 0 10-2 0 5 5 0 01-10 0z" fill="currentColor" />
+                </svg>
+              </span>
+            </div>
+          </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <button
-            onClick={onPauseResume}
-            className="flex-1 h-10 rounded-xl border font-medium"
-          >
-            {paused ? "Fortsetzen" : "Pause"}
-          </button>
-          <button onClick={onCancel} className="h-10 px-4 rounded-xl border text-neutrals-700">Abbrechen</button>
-          <button
-            onClick={onSend}
-            disabled={uploading}
-            className={cls(
-              "h-10 px-4 rounded-xl bg-[#1D252A] text-white font-semibold",
-              uploading && "opacity-70 cursor-not-allowed",
-            )}
-          >
-            {uploading ? "Sende…" : "Senden"}
-          </button>
+          {uploading && (
+            <p className="mt-6 text-center text-small text-neutrals-500">Übertrage Aufnahme…</p>
+          )}
+
+          <div className="mt-12 flex flex-col gap-3 md:flex-row md:justify-center">
+            <button
+              onClick={onPauseResume}
+              className="h-12 rounded-full border border-accent-700 px-6 text-small font-semibold text-neutrals-900 transition-colors duration-150 hover:bg-primary-500/10"
+            >
+              {paused ? "Fortsetzen" : "Pause"}
+            </button>
+            <button
+              onClick={onCancel}
+              className="h-12 rounded-full border border-accent-700 px-6 text-small font-semibold text-neutrals-600 transition-colors duration-150 hover:bg-neutrals-100"
+            >
+              Abbrechen
+            </button>
+            <button
+              onClick={onSend}
+              disabled={uploading}
+              className={cls(
+                "h-12 rounded-full bg-primary-500 px-8 text-small font-semibold text-[#2C2C2C] shadow-elevation2 transition-colors duration-150",
+                uploading ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-400",
+              )}
+            >
+              {uploading ? "Sende…" : "Senden"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
