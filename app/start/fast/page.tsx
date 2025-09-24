@@ -114,9 +114,9 @@ function VoiceRecorderScreen({
           if (v > peak) peak = v;
         }
         const boosted = Math.min(1, peak * 3.5);
-        setLevel((prev) => prev * 0.8 + boosted * 0.2);
+        setLevel((prev) => prev * 0.75 + boosted * 0.25);
       } else {
-        setLevel((prev) => prev * 0.9);
+        setLevel((prev) => prev * 0.92);
       }
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -327,7 +327,7 @@ function VoiceRecorderScreen({
 
   if (!open) return null;
 
-  const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.35 : 0.08);
+  const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.45 : 0.12);
   const primaryText = status === "recording" ? "Pause" : status === "paused" ? "Fortsetzen" : "Aufnehmen";
   const helperText = status === "recording"
     ? "Tippe, um die Aufnahme zu pausieren."
@@ -364,7 +364,7 @@ function VoiceRecorderScreen({
             </p>
           </div>
 
-          <div className="mt-8 flex flex-1 flex-col items-center justify-center">
+          <div className="mt-10 flex flex-1 flex-col items-center justify-center">
             <button
               type="button"
               onClick={toggleRecording}
@@ -378,8 +378,8 @@ function VoiceRecorderScreen({
                 <path d="M7 11a1 1 0 10-2 0 7 7 0 006 6.93V20H9a1 1 0 100 2h6a1 1 0 100-2h-2v-2.07A7 7 0 0019 11a1 1 0 10-2 0 5 5 0 01-10 0z" />
               </svg>
             </button>
-            <span className="mt-4 text-sm font-semibold text-neutrals-900">{primaryText}</span>
-            <p className="mt-1 text-xs text-neutrals-500">{helperText}</p>
+            <span className="mt-6 text-sm font-semibold text-neutrals-900">{primaryText}</span>
+            <p className="mt-2 text-xs text-neutrals-500">{helperText}</p>
             {error && <p className="mt-3 text-xs font-medium text-semantic-error-base">{error}</p>}
             {uploading && <p className="mt-4 text-xs text-neutrals-500">Übertrage Aufnahme…</p>}
           </div>
