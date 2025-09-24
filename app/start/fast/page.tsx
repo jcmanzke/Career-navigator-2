@@ -336,7 +336,33 @@ function VoiceRecorderScreen({
     : "Tippe, um die Aufnahme zu starten.";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-neutrals-0">
+    <div className="fixed inset-0 z-50 flex flex-col bg-neutrals-0 relative">
+      {uploading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-neutrals-900/65 backdrop-blur-sm">
+          <div className="relative flex flex-col items-center gap-6 text-center text-neutrals-0">
+            <div className="relative h-48 w-48">
+              <span className="cn-pulse-ring absolute inset-0 rounded-full" />
+              <span className="cn-pulse-ring-delay absolute inset-6 rounded-full" />
+              <div className="cn-orbit absolute inset-12 rounded-full">
+                <div className="absolute inset-[10px] rounded-full bg-[#0B1E2C] opacity-80" />
+              </div>
+              <div className="absolute inset-[36px] flex items-center justify-center rounded-full bg-[#1D252A] text-white shadow-elevation3">
+                <svg className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3zm4-3a4 4 0 11-8 0V6a4 4 0 118 0v5z" />
+                  <path d="M7 11a1 1 0 10-2 0 7 7 0 006 6.93V20H9a1 1 0 100 2h6a1 1 0 100-2h-2v-2.07A7 7 0 0019 11a1 1 0 10-2 0 5 5 0 01-10 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-semibold">Übertragung läuft…</p>
+              <p className="max-w-xs text-sm text-neutrals-200">
+                Wir sichern deine Aufnahme und bereiten sie für die Analyse vor.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="flex h-14 items-center gap-3 border-b border-accent-200 px-4">
         <button
           type="button"
@@ -352,7 +378,7 @@ function VoiceRecorderScreen({
         <div className="w-9" aria-hidden="true" />
       </header>
 
-      <main className="flex flex-1 flex-col px-6 pb-10 pt-8 sm:px-8">
+      <main className="relative flex flex-1 flex-col px-6 pb-10 pt-8 sm:px-8">
         <div className="flex flex-1 flex-col items-center">
           <div className="w-full max-w-md text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-500">{status === "recording" ? "Aufnahme läuft" : "Bereit"}</p>
@@ -381,7 +407,6 @@ function VoiceRecorderScreen({
             <span className="mt-6 text-sm font-semibold text-neutrals-900">{primaryText}</span>
             <p className="mt-2 text-xs text-neutrals-500">{helperText}</p>
             {error && <p className="mt-3 text-xs font-medium text-semantic-error-base">{error}</p>}
-            {uploading && <p className="mt-4 text-xs text-neutrals-500">Übertrage Aufnahme…</p>}
           </div>
         </div>
 
@@ -599,7 +624,7 @@ export default function FastTrack() {
                           <circle cx="12" cy="12" r="10" fill="#22C55E"/>
                           <path d="M8 12.5l2.5 2.5L16 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                        <span>Übertragung erfolgreich - sprich einfach weiter, wenn dir noch weitere wichtige Punkte einfallen.</span>
+                        <span>Übertragung erfolgreich</span>
                       </div>
                     )}
                   </div>
