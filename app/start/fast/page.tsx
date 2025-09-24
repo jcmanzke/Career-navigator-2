@@ -8,6 +8,8 @@ import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT, N8N_WEBHOOK_URL } from "@/lib/
 
 type FieldKey = "background" | "current" | "goals";
 type RecorderStatus = "idle" | "recording" | "paused";
+type HistoryEntry = { timestamp: number; text: string };
+type HistoryRecord = Record<FieldKey, HistoryEntry[]>;
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -54,6 +56,12 @@ type Basics = {
   goals: string;
 };
 
+const emptyHistory: HistoryRecord = {
+  background: [],
+  current: [],
+  goals: [],
+};
+
 function VoiceRecorderScreen({
   open,
   onClose,
@@ -64,16 +72,18 @@ function VoiceRecorderScreen({
   threadId,
   turn,
   snapshot,
+  history,
 }: {
   open: boolean;
   onClose: () => void;
   field: FieldKey;
   label: string;
-  onSaved: (opts: { field: FieldKey; text: string; ok?: boolean }) => void;
+  onSaved: (opts: { field: FieldKey; text: string; ok?: boolean; timestamp?: number }) => void;
   userId?: string | null;
   threadId?: string;
   turn?: number;
   snapshot?: Basics;
+  history: HistoryRecord;
 }) {
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [level, setLevel] = useState(0);
@@ -300,6 +310,9 @@ function VoiceRecorderScreen({
         if (snapshot.current) fd.append("step2Current", snapshot.current);
         if (snapshot.goals) fd.append("step2Goals", snapshot.goals);
       }
+      try {
+        fd.append("history", JSON.stringify(history));
+      } catch {}
 
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
@@ -323,7 +336,7 @@ function VoiceRecorderScreen({
         return txt;
       };
       const text = extractOutput(bodyText);
-      onSaved({ field, text, ok: true });
+      onSaved({ field, text, ok: true, timestamp: Date.now() });
       cleanup();
       onClose();
     } catch (e) {
@@ -454,6 +467,7 @@ export default function FastTrack() {
   const [userId, setUserId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [basics, setBasics] = useState<Basics>({ background: "", current: "", goals: "" });
+  const [history, setHistory] = useState<HistoryRecord>(emptyHistory);
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
   const [recField, setRecField] = useState<null | FieldKey>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -479,7 +493,7 @@ export default function FastTrack() {
         // Load session
         const { data: row } = await supabase
           .from("fast_scan_sessions")
-          .select("id, step, basics, results")
+          .select("id, step, basics, history, results")
           .eq("user_id", user.id)
           .single();
         if (row) {
@@ -487,12 +501,29 @@ export default function FastTrack() {
           const nextStep = typeof row.step === "number" && row.step >= 1 ? row.step : 1;
           setStep(nextStep);
           if (row.basics) setBasics({ background: row.basics.background || "", current: row.basics.current || "", goals: row.basics.goals || "" });
+          if (row.history) {
+            const normalize = (value: any): HistoryRecord => {
+              const base: HistoryRecord = { ...emptyHistory };
+              (Object.keys(base) as FieldKey[]).forEach((key) => {
+                const arr = Array.isArray(value?.[key]) ? value[key] : [];
+                base[key] = arr
+                  .filter((entry: any) => entry && typeof entry.text === "string")
+                  .map((entry: any) => ({
+                    timestamp: typeof entry.timestamp === "number" ? entry.timestamp : Date.now(),
+                    text: String(entry.text),
+                  }))
+                  .sort((a, b) => a.timestamp - b.timestamp);
+              });
+              return base;
+            };
+            setHistory(normalize(row.history));
+          }
           if (row.results) setResults(row.results);
         } else {
           // create an empty session for this user
           const { data: created, error } = await supabase
             .from("fast_scan_sessions")
-            .insert({ user_id: user.id, step: 1, basics: {}, results: null })
+            .insert({ user_id: user.id, step: 1, basics: {}, history: {}, results: null })
             .select()
             .single();
           if (!error && created) {
@@ -518,7 +549,7 @@ export default function FastTrack() {
   }, [sessionId]);
 
   const upsertSession = useCallback(
-    async (patch: Partial<{ step: number; basics: Basics; results: any }>) => {
+    async (patch: Partial<{ step: number; basics: Basics; history: HistoryRecord; results: any }>) => {
       if (!userId) return;
       try {
         setSaving("saving");
@@ -526,6 +557,7 @@ export default function FastTrack() {
         const payload: any = { user_id: userId };
         if (typeof patch.step === "number") payload.step = patch.step;
         if (patch.basics) payload.basics = patch.basics;
+        if (patch.history) payload.history = patch.history;
         if ("results" in patch) payload.results = patch.results;
         const { data } = await supabase
           .from("fast_scan_sessions")
@@ -546,10 +578,10 @@ export default function FastTrack() {
   useEffect(() => {
     if (!userId || step < 1) return;
     const t = setTimeout(() => {
-      upsertSession({ basics });
+      upsertSession({ basics, history });
     }, 600);
     return () => clearTimeout(t);
-  }, [basics, userId, step, upsertSession]);
+  }, [basics, history, userId, step, upsertSession]);
 
   // Fallback results used if webhook fails
   const dummyData = useMemo(
@@ -644,7 +676,7 @@ export default function FastTrack() {
               <div className="flex justify-end pt-6">
                 <button
                   onClick={async () => {
-                    await upsertSession({ step: 2, basics });
+                    await upsertSession({ step: 2, basics, history });
                     setStep(2);
                   }}
                   className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
@@ -671,7 +703,7 @@ export default function FastTrack() {
                 <button onClick={() => setStep(1)} className="px-4 py-2 rounded-xl border">Zurück</button>
                 <button
                   onClick={async () => {
-                    await upsertSession({ step: 3, basics });
+                    await upsertSession({ step: 3, basics, history });
                     setStep(3);
                   }}
                   className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
@@ -790,17 +822,35 @@ export default function FastTrack() {
         field={(recField || "background") as FieldKey}
         label={recField === "current" ? "Aktuelle Rolle" : recField === "goals" ? "Ziele und Interessen" : "Ausbildung und beruflicher Hintergrund"}
         onClose={() => setRecField(null)}
-        onSaved={({ field, text, ok }) => {
-          setBasics((b) => ({ ...b, [field]: text } as Basics));
-          if (ok) {
-            setSentOk((s) => ({ ...s, [field]: true }));
-            setTurns((t) => ({ ...t, [field]: (t[field] ?? 0) + 1 }));
+        onSaved={({ field, text, ok, timestamp }) => {
+          if (!ok) {
+            setSentOk((s) => ({ ...s, [field]: false }));
+            return;
           }
+          const entry: HistoryEntry = {
+            timestamp: timestamp ?? Date.now(),
+            text,
+          };
+          setHistory((prev) => {
+            const nextHistory: HistoryRecord = {
+              ...prev,
+              [field]: [...(prev[field] ?? []), entry].sort((a, b) => a.timestamp - b.timestamp),
+            };
+            setBasics((b) => {
+              const nextBasics = { ...b, [field]: text } as Basics;
+              upsertSession({ basics: nextBasics, history: nextHistory });
+              return nextBasics;
+            });
+            return nextHistory;
+          });
+          setSentOk((s) => ({ ...s, [field]: true }));
+          setTurns((t) => ({ ...t, [field]: (t[field] ?? 0) + 1 }));
         }}
         userId={userId}
         threadId={recField ? threadIds[recField] : undefined}
         turn={recField ? turns[recField] : undefined}
         snapshot={basics}
+        history={history}
       />
     </main>
   );

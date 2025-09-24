@@ -140,6 +140,7 @@ create table if not exists public.fast_scan_sessions (
   user_id uuid not null references auth.users(id) on delete cascade,
   step int not null default 0,
   basics jsonb default '{}'::jsonb,
+  history jsonb default '{}'::jsonb,
   results jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
