@@ -679,6 +679,7 @@ export default function FastTrack() {
                       <button
                         type="button"
                         onClick={() => setRecField(item.key)}
+                        onTouchStart={() => setRecField(item.key)}
                         className="shrink-0 h-10 px-4 rounded-xl bg-primary-500 text-[#2C2C2C] font-semibold"
                         aria-label={`Aufnehmen: ${item.label}`}
                       >
