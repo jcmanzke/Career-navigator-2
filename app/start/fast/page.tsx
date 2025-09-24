@@ -90,6 +90,7 @@ function VoiceRecorderScreen({
   const [level, setLevel] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const portalRef = useRef<HTMLElement | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -217,6 +218,23 @@ function VoiceRecorderScreen({
     try { window.scrollTo(0, 0); } catch {}
     return () => {
       document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return;
+    if (!portalRef.current) {
+      const el = document.createElement("div");
+      el.className = "cn-recorder-portal";
+      document.body.appendChild(el);
+      portalRef.current = el;
+    }
+    const node = portalRef.current;
+    return () => {
+      if (node && node.parentNode) {
+        try { node.parentNode.removeChild(node); } catch {}
+      }
+      portalRef.current = null;
     };
   }, [open]);
 
@@ -460,7 +478,8 @@ function VoiceRecorderScreen({
   );
 
   if (typeof document === "undefined") return content;
-  return createPortal(content, document.body);
+  const target = portalRef.current ?? document.body;
+  return createPortal(content, target);
 }
 
 export default function FastTrack() {
@@ -658,6 +677,7 @@ export default function FastTrack() {
                         </div>
                       </div>
                       <button
+                        type="button"
                         onClick={() => setRecField(item.key)}
                         className="shrink-0 h-10 px-4 rounded-xl bg-primary-500 text-[#2C2C2C] font-semibold"
                         aria-label={`Aufnehmen: ${item.label}`}
