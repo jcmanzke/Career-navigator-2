@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
@@ -80,7 +79,6 @@ function VoiceRecorderScreen({
   const [level, setLevel] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -203,18 +201,11 @@ function VoiceRecorderScreen({
   useEffect(() => {
     if (!open) return;
     if (typeof document === "undefined") return;
-    const el = document.createElement("div");
-    el.className = "cn-recorder-portal";
-    document.body.appendChild(el);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    setPortalEl(el);
+    try { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); } catch { try { window.scrollTo(0, 0); } catch {} }
     return () => {
       document.body.style.overflow = previousOverflow;
-      try {
-        document.body.removeChild(el);
-      } catch {}
-      setPortalEl(null);
     };
   }, [open]);
 
@@ -345,7 +336,7 @@ function VoiceRecorderScreen({
     }
   };
 
-  if (!open || !portalEl) return null;
+  if (!open) return null;
 
   const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.45 : 0.12);
   const primaryText = status === "recording" ? "Pause" : status === "paused" ? "Fortsetzen" : "Aufnehmen";
@@ -355,7 +346,7 @@ function VoiceRecorderScreen({
     ? "Pausiert – tippe, um fortzusetzen."
     : "Tippe, um die Aufnahme zu starten.";
 
-  return createPortal(
+  return (
     <div className="fixed inset-0 z-50 flex flex-col bg-neutrals-0 relative">
       {uploading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-neutrals-900/65 backdrop-blur-sm">
@@ -452,7 +443,7 @@ function VoiceRecorderScreen({
         </div>
       </main>
     </div>
-  , portalEl);
+  );
 }
 
 export default function FastTrack() {
