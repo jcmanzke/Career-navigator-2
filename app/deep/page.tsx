@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import LoginScreen from "@/app/components/LoginScreen";
+import Sidebar from "@/app/components/Sidebar";
+import CareerNavigatorLoader from "@/app/CareerNavigatorLoader";
 import { useSupabaseSession } from "@/lib/useSupabaseSession";
 
-export default function Page() {
-  const router = useRouter();
+export default function DeepPage() {
   const { session, loading, error } = useSupabaseSession();
-
-  useEffect(() => {
-    if (session) {
-      router.replace("/start");
-    }
-  }, [session, router]);
 
   if (loading) return null;
 
@@ -30,8 +23,11 @@ export default function Page() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-small text-neutrals-600">Loading your menu…</p>
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex-1 min-w-0">
+        <CareerNavigatorLoader />
+      </div>
     </div>
   );
 }

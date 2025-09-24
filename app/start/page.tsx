@@ -27,8 +27,8 @@ export default function StartPage() {
 
   const deepAnalysisButtonLabel = hasServerProgress ? "Continue Deep Analysis" : "Start Deep Analysis";
   const deepAnalysisButtonHref = hasServerProgress
-    ? (progress ? getResumeUrl(progress) : "/")
-    : "/";
+    ? (progress ? getResumeUrl(progress) : "/deep")
+    : "/deep";
   const deepAnalysisButtonClasses = hasServerProgress
     ? "bg-white text-[#2C2C2C]"
     : "bg-primary-500 text-[#2C2C2C]";

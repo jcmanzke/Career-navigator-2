@@ -331,7 +331,7 @@ function Shell({ step, setStep, saveState, children }) {
   // Top header content (logo/title) removed per requirements; logout/email handled in sidebar
   return (
     <div className="min-h-screen text-neutrals-900">
-      <TopBar hideBackOn={["/"]} right={<SaveIndicator state={saveState} />} />
+      <TopBar hideBackOn={["/deep"]} right={<SaveIndicator state={saveState} />} />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <ProgressSteps current={Math.max(1, step || 1)} onSelect={setStep} />
         {children}
