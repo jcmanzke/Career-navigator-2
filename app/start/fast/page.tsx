@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
@@ -213,7 +214,7 @@ function VoiceRecorderScreen({
     if (typeof document === "undefined") return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    try { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); } catch { try { window.scrollTo(0, 0); } catch {} }
+    try { window.scrollTo(0, 0); } catch {}
     return () => {
       document.body.style.overflow = previousOverflow;
     };
@@ -359,7 +360,7 @@ function VoiceRecorderScreen({
     ? "Pausiert – tippe, um fortzusetzen."
     : "Tippe, um die Aufnahme zu starten.";
 
-  return (
+  const content = (
     <div className="fixed inset-0 z-50 flex flex-col bg-neutrals-0 relative">
       {uploading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-neutrals-900/65 backdrop-blur-sm">
@@ -457,6 +458,9 @@ function VoiceRecorderScreen({
       </main>
     </div>
   );
+
+  if (typeof document === "undefined") return content;
+  return createPortal(content, document.body);
 }
 
 export default function FastTrack() {
