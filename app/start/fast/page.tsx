@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
+import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT, N8N_WEBHOOK_URL } from "@/lib/n8n";
 
 type FieldKey = "background" | "current" | "goals";
 
@@ -197,8 +198,9 @@ function VoiceRecorderModal({
     }
     // Send to webhook – server should return a concise summary (markdown allowed)
     try {
-      const res = await fetch("https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620", {
+      const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
+        headers: { [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
         body: fd,
       });
       // Prefer the important value from the `text` header; if JSON, extract .output
@@ -386,14 +388,11 @@ export default function FastTrack() {
     setLoading(true);
     setResults(null);
     try {
-      const res = await fetch(
-        "https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, sessionId, basics }),
-        },
-      );
+      const res = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+        body: JSON.stringify({ userId, sessionId, basics }),
+      });
       const text = await res.text();
       let data: any;
       try {
@@ -515,8 +514,12 @@ export default function FastTrack() {
                       try {
                         const payload = { summary: basics };
                         const res = await fetch(
-                          "https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620",
-                          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+                          N8N_WEBHOOK_URL,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                            body: JSON.stringify(payload),
+                          },
                         );
                         const text = await res.text();
                         setChatMessages([{ role: "assistant", content: text }]);
@@ -567,8 +570,12 @@ export default function FastTrack() {
                     input.value = "";
                     try {
                       const res = await fetch(
-                        "https://chrismzke.app.n8n.cloud/webhook-test/4646f17e-7ee3-40b8-b78e-fe9c59d31620",
-                        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ summary: basics, followup: value }) },
+                        N8N_WEBHOOK_URL,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                          body: JSON.stringify({ summary: basics, followup: value }),
+                        },
                       );
                       const text = await res.text();
                       setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);

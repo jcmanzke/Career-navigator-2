@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/utils/supabase/client";
 import TopBar from "@/app/components/TopBar";
+import { CONTEXT_HEADER_NAME, DEEP_ANALYSIS_CONTEXT, N8N_WEBHOOK_URL } from "@/lib/n8n";
 
 // --- Minimal helpers -------------------------------------------------------
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -636,14 +637,14 @@ function Phase4({ journey, onNext, onBack }) {
   const analyze = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        "https://chrismzke.app.n8n.cloud/webhook/c4123f59-47a3-4f9b-a225-126d780722e9",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: journey.userId, journeyId: journey.id }),
+      const res = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          [CONTEXT_HEADER_NAME]: DEEP_ANALYSIS_CONTEXT,
         },
-      );
+        body: JSON.stringify({ userId: journey.userId, journeyId: journey.id }),
+      });
       const text = await res.text();
       try {
         const json = JSON.parse(text);
