@@ -113,10 +113,10 @@ function VoiceRecorderScreen({
           const v = Math.abs((data[i] - 128) / 128);
           if (v > peak) peak = v;
         }
-        const boosted = Math.min(1, peak * 4.5);
-        setLevel((prev) => prev * 0.3 + boosted * 0.7);
+        const boosted = Math.min(1, peak * 3.5);
+        setLevel((prev) => prev * 0.85 + boosted * 0.15);
       } else {
-        setLevel((prev) => prev * 0.85);
+        setLevel((prev) => prev * 0.95);
       }
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -317,7 +317,7 @@ function VoiceRecorderScreen({
 
   if (!open) return null;
 
-  const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.35 : 0.05);
+  const scale = 1 + (status === "recording" ? Math.min(level, 1) * 0.2 : 0.03);
   const primaryText = status === "recording" ? "Pause" : status === "paused" ? "Fortsetzen" : "Aufnehmen";
   const helperText = status === "recording"
     ? "Tippe, um die Aufnahme zu pausieren."
@@ -342,38 +342,40 @@ function VoiceRecorderScreen({
         <div className="w-9" aria-hidden="true" />
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-between px-6 pb-10 pt-8 sm:px-8">
-        <div className="w-full max-w-md text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-500">{status === "recording" ? "Aufnahme läuft" : "Bereit"}</p>
-          <h1 className="mt-2 text-lg font-semibold text-neutrals-900 sm:text-[22px]">
-            Erzähle frei über {typeof label === "string" ? label : String(label)}
-          </h1>
-          <p className="mt-3 text-small text-neutrals-600">
-            Wir transkribieren automatisch – du kannst jederzeit pausieren oder die Aufnahme senden.
-          </p>
+      <main className="flex flex-1 flex-col px-6 pb-10 pt-8 sm:px-8">
+        <div className="flex flex-1 flex-col items-center">
+          <div className="w-full max-w-md text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-500">{status === "recording" ? "Aufnahme läuft" : "Bereit"}</p>
+            <h1 className="mt-2 text-lg font-semibold text-neutrals-900 sm:text-[22px]">
+              Erzähle frei über {typeof label === "string" ? label : String(label)}
+            </h1>
+            <p className="mt-3 text-small text-neutrals-600">
+              Wir transkribieren automatisch – du kannst jederzeit pausieren oder die Aufnahme senden.
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-1 flex-col items-center justify-center">
+            <button
+              type="button"
+              onClick={toggleRecording}
+              disabled={uploading}
+              className="relative flex h-28 w-28 items-center justify-center rounded-full bg-[#1D252A] text-white shadow-elevation3 transition-transform duration-500 ease-out sm:h-32 sm:w-32"
+              style={{ transform: `scale(${scale})` }}
+              aria-label={primaryText}
+            >
+              <svg className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3zm4-3a4 4 0 11-8 0V6a4 4 0 118 0v5z" />
+                <path d="M7 11a1 1 0 10-2 0 7 7 0 006 6.93V20H9a1 1 0 100 2h6a1 1 0 100-2h-2v-2.07A7 7 0 0019 11a1 1 0 10-2 0 5 5 0 01-10 0z" />
+              </svg>
+            </button>
+            <span className="mt-4 text-sm font-semibold text-neutrals-900">{primaryText}</span>
+            <p className="mt-1 text-xs text-neutrals-500">{helperText}</p>
+            {error && <p className="mt-3 text-xs font-medium text-semantic-error-base">{error}</p>}
+            {uploading && <p className="mt-4 text-xs text-neutrals-500">Übertrage Aufnahme…</p>}
+          </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center">
-          <button
-            type="button"
-            onClick={toggleRecording}
-            disabled={uploading}
-            className="relative flex h-28 w-28 items-center justify-center rounded-full bg-[#1D252A] text-white shadow-elevation3 transition-transform duration-150 ease-out sm:h-32 sm:w-32"
-            style={{ transform: `scale(${scale})` }}
-            aria-label={primaryText}
-          >
-            <svg className="h-10 w-10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3zm4-3a4 4 0 11-8 0V6a4 4 0 118 0v5z" />
-              <path d="M7 11a1 1 0 10-2 0 7 7 0 006 6.93V20H9a1 1 0 100 2h6a1 1 0 100-2h-2v-2.07A7 7 0 0019 11a1 1 0 10-2 0 5 5 0 01-10 0z" />
-            </svg>
-          </button>
-          <span className="mt-4 text-sm font-semibold text-neutrals-900">{primaryText}</span>
-          <p className="mt-1 text-xs text-neutrals-500">{helperText}</p>
-          {error && <p className="mt-3 text-xs font-medium text-semantic-error-base">{error}</p>}
-          {uploading && <p className="mt-4 text-xs text-neutrals-500">Übertrage Aufnahme…</p>}
-        </div>
-
-        <div className="mt-10 w-full max-w-md">
+        <div className="mt-10 w-full max-w-md self-center">
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
             <button
               type="button"
