@@ -300,17 +300,12 @@ export default function RecorderPage({ params }: { params: { field: string } }) 
       fd.append("turn", String(turn));
       fd.append("mode", "append");
       fd.append("mimeType", mimeType);
-      if (snapshot) {
-        try {
-          fd.append("step2", JSON.stringify(snapshot));
-        } catch {}
-        if (snapshot.background) fd.append("step2Background", snapshot.background);
-        if (snapshot.current) fd.append("step2Current", snapshot.current);
-        if (snapshot.goals) fd.append("step2Goals", snapshot.goals);
+      if (snapshot && field) {
+        const existingSummary = snapshot[field];
+        if (existingSummary) {
+          fd.append("existingSummary", existingSummary);
+        }
       }
-      try {
-        fd.append("history", JSON.stringify(history));
-      } catch {}
 
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
