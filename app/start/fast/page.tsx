@@ -195,8 +195,25 @@ export default function FastTrack() {
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
               <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
               <p className="text-neutrals-700 mb-4">Statt Tippen: per Stimme aufnehmen. Jede Eingabe öffnet ein Pop‑up zur Sprachaufnahme.</p>
+              <button
+                type="button"
+                onClick={() => router.push("/start/fast/voice")}
+                className="w-full mb-6 rounded-2xl border border-primary-200 bg-primary-50 px-5 py-4 text-left shadow-sm transition hover:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                aria-label="Sprachaufnahme öffnen"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-600">Sprach-Coach</p>
+                    <p className="text-xl font-semibold text-[#1D252A]">Aufnahme starten</p>
+                    <p className="text-sm text-[#1D252A]/70">
+                      Öffne den Vollbildmodus, um deine Stimme bequem aufzunehmen.
+                    </p>
+                  </div>
+                  <span aria-hidden="true" className="text-3xl text-primary-600">›</span>
+                </div>
+              </button>
               <div className="space-y-4">
-                {(([ 
+                {(([
                   { key: "background", label: "Ausbildung und beruflicher Hintergrund" },
                   { key: "current", label: "Aktuelle Rolle" },
                   { key: "goals", label: "Ziele und Interessen" },
