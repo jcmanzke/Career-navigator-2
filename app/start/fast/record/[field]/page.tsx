@@ -22,6 +22,54 @@ function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
 
+function RecordingOverlay({ fieldName, onStop }: { fieldName: string; onStop: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm text-neutrals-0 px-6">
+      <div className="w-full max-w-md text-center space-y-8">
+        <p className="text-small uppercase tracking-[0.3em] text-white/70">Aufnahme läuft</p>
+        <h2 className="text-2xl font-semibold">Sprich über: {fieldName}</h2>
+        <div className="relative mx-auto flex h-52 w-52 items-center justify-center">
+          <div className="absolute inset-0 rounded-full cn-pulse-ring" aria-hidden="true" />
+          <div className="absolute inset-6 rounded-full cn-pulse-ring-delay" aria-hidden="true" />
+          <div className="relative flex h-28 w-28 items-center justify-center rounded-full bg-primary-500 text-[#2C2C2C] shadow-elevation4">
+            <span role="img" aria-hidden="true" className="text-4xl">
+              🎙️
+            </span>
+          </div>
+        </div>
+        <p className="text-neutrals-200">
+          Du kannst jederzeit auf „Aufnahme beenden“ tippen. Deine Aufnahme wird anschließend automatisch übertragen.
+        </p>
+        <button
+          type="button"
+          onClick={onStop}
+          className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 font-semibold text-[#1D252A] shadow-elevation3 hover:bg-neutrals-100"
+        >
+          Aufnahme beenden
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SendingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm text-neutrals-0 px-6">
+      <div className="w-full max-w-sm text-center space-y-6">
+        <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
+          <div className="absolute h-full w-full rounded-full border border-white/20" />
+          <div className="cn-orbit h-36 w-36 rounded-full" aria-hidden="true" />
+          <div className="absolute inset-10 rounded-full bg-primary-500 text-[#2C2C2C] flex items-center justify-center font-semibold">
+            <span>Sendet…</span>
+          </div>
+        </div>
+        <p className="text-lg font-medium">{message}</p>
+        <p className="text-sm text-white/70">Bitte kurz warten, wir schreiben dein Gesagtes für dich auf.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function RecordFieldPage() {
   const router = useRouter();
   const params = useParams<{ field: string }>();
@@ -311,6 +359,8 @@ export default function RecordFieldPage() {
     return null;
   }
 
+  const fieldLabelText = useMemo(() => (field ? fieldLabel(field) : ""), [field]);
+
   return (
     <main className="min-h-screen px-4 py-8">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -396,6 +446,8 @@ export default function RecordFieldPage() {
           </section>
         ) : null}
       </div>
+      {recording && <RecordingOverlay fieldName={fieldLabelText} onStop={stopRecording} />}
+      {transcribing && !recording && <SendingOverlay message="Übertrage deine Antwort…" />}
     </main>
   );
 }
