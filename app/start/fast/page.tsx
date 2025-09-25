@@ -193,49 +193,28 @@ export default function FastTrack() {
 
           {step === 1 && (
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
-              <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
-              <p className="text-neutrals-700 mb-4">Statt Tippen: per Stimme aufnehmen. Jede Eingabe öffnet ein Pop‑up zur Sprachaufnahme.</p>
-              <div className="space-y-4">
-                {(([ 
+              <h2 className="text-lg font-semibold mb-6">Schritt 1: Basisinfos</h2>
+              <div className="grid gap-4">
+                {([
                   { key: "background", label: "Ausbildung und beruflicher Hintergrund" },
                   { key: "current", label: "Aktuelle Rolle" },
                   { key: "goals", label: "Ziele und Interessen" },
-                ] as { key: FieldKey; label: string }[])).map((item) => (
-                  <div key={item.key} className="rounded-2xl border p-4 bg-neutrals-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="font-medium">{item.label}</div>
-                        <div className="mt-1 space-y-1">
-                          <div className="text-small text-neutrals-600 line-clamp-2">
-                            {(basics as any)[item.key] ? (basics as any)[item.key] : "Noch keine Eingabe"}
-                          </div>
-                        </div>
+                ] as { key: FieldKey; label: string }[]).map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => router.push(`/start/fast/voice?field=${item.key}`)}
+                    className="w-full rounded-2xl border border-neutrals-200 bg-neutrals-0 px-5 py-6 text-left shadow-sm transition hover:border-primary-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                    aria-label={`Sprachaufnahme für ${item.label} öffnen`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-[#1D252A]">{item.label}</p>
+                        <p className="text-xs text-neutrals-500">Antwort per Stimme aufnehmen</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/start/fast/record/${item.key}`)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            router.push(`/start/fast/record/${item.key}`);
-                          }
-                        }}
-                        className="shrink-0 h-10 px-4 rounded-xl bg-primary-500 text-[#2C2C2C] font-semibold"
-                        aria-label={`Aufnehmen: ${item.label}`}
-                      >
-                        Aufnehmen
-                      </button>
+                      <span aria-hidden="true" className="text-2xl text-primary-500">▶</span>
                     </div>
-                    {history[item.key]?.length ? (
-                      <div className="mt-3 w-full rounded-xl bg-green-50 text-green-700 border border-green-200 px-3 py-2 flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="12" r="10" fill="#22C55E"/>
-                          <path d="M8 12.5l2.5 2.5L16 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span>Übertragung erfolgreich</span>
-                      </div>
-                    ) : null}
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="flex justify-end pt-6">
