@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# For merge commits or templates that already filled in text, leave as-is.
+if [ -s "$1" ]; then
+  exit 0
+fi
+
+# Use branch name when available; default to 'main'.
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo main)
+
+# Replace slashes/spaces so the message is tidy.
+BRANCH_SLUG=$(echo "$BRANCH" | tr '/ ' '-')
+
+# Pre-fill commit message; feel free to edit before finalising.
+echo "chore(${BRANCH_SLUG}): update" > "$1"
