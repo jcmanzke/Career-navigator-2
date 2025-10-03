@@ -203,25 +203,19 @@ export default function FastTrack() {
                 ] as { key: FieldKey; label: string }[])).map((item) => {
                   const entries = history[item.key] ?? [];
                   const latestEntry = entries[entries.length - 1];
-                  const preview = latestEntry?.text || (basics as any)[item.key];
-                  const hasRecording = Boolean(preview);
+                  const hasRecording = Boolean(latestEntry?.text || (basics as any)[item.key]);
                   return (
                     <button
                       key={item.key}
                       type="button"
                       onClick={() => router.push(`/start/fast/record/${item.key}`)}
                       className={cls(
-                        "group flex flex-col justify-between rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 text-left shadow-sm transition-shadow",
+                        "group flex flex-col justify-between rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 text-left shadow-sm transition-transform",
                         "hover:shadow-elevation3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
                       )}
                       aria-label={`Aufnahme starten: ${item.label}`}
                     >
-                      <div className="space-y-2">
-                        <span className="text-base font-medium text-neutrals-900">{item.label}</span>
-                        <span className="block text-small text-neutrals-600 line-clamp-3">
-                          {hasRecording ? preview : "Noch keine Aufnahme gespeichert"}
-                        </span>
-                      </div>
+                      <span className="text-base font-medium text-neutrals-900">{item.label}</span>
                       <div className="mt-6 flex items-center gap-3 text-sm font-semibold text-primary-600">
                         <span
                           className={cls(
@@ -232,7 +226,7 @@ export default function FastTrack() {
                         >
                           🎙️
                         </span>
-                        <span>{hasRecording ? "Erneut aufnehmen" : "Tippen zum Aufnehmen"}</span>
+                        <span className="text-neutrals-900">Aufnehmen</span>
                       </div>
                     </button>
                   );
