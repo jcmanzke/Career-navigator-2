@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { saveProgress } from "@/lib/progress";
@@ -14,6 +14,7 @@ import {
   inputFieldLabel,
   normalizeHistory,
 } from "../../shared";
+import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
 
 const FIELD_KEYS: FieldKey[] = ["background", "current", "goals"];
 const HISTORY_LIMIT = 10;
@@ -421,6 +422,31 @@ export default function RecordFieldPage() {
     setRecorderOpen(true);
   };
 
+  const sendToWebhook = useCallback(
+    async ({ snippet, full }: { snippet: string; full: string }) => {
+      if (!userId || !field) return;
+      try {
+        const payload = {
+          userId,
+          field,
+          snippet,
+          value: full,
+        };
+        await fetch("/api/fast-track-webhook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        console.error("fast/record webhook error", err);
+      }
+    },
+    [field, userId],
+  );
+
   const transcribeChunks = async () => {
     if (!chunksRef.current.length) {
       skipTranscribeRef.current = false;
@@ -449,12 +475,20 @@ export default function RecordFieldPage() {
       if (!res.ok || !data?.text) {
         throw new Error(data?.detail || data?.error || "Transkription fehlgeschlagen");
       }
+      const trimmedSnippet = String(data.text).trim();
+      let nextValue = "";
       setValue((prev) => {
-        const trimmed = String(data.text).trim();
-        if (!prev) return trimmed;
+        if (!prev) {
+          nextValue = trimmedSnippet;
+          return trimmedSnippet;
+        }
         const sep = prev.endsWith(" ") ? "" : " ";
-        return (prev + sep + trimmed).trim();
+        nextValue = (prev + sep + trimmedSnippet).trim();
+        return nextValue;
       });
+      if (trimmedSnippet) {
+        void sendToWebhook({ snippet: trimmedSnippet, full: nextValue || trimmedSnippet });
+      }
     } catch (err) {
       console.error("transcribe error", err);
       setError("Fehler bei der Transkription.");
@@ -491,7 +525,7 @@ export default function RecordFieldPage() {
 
       const { data, error: upsertError } = await supabase
         .from("fast_scan_sessions")
-        .upsert({ user_id: userId, basics: nextBasics, history: nextHistory, step: 1 })
+        .upsert({ user_id: userId, basics: nextBasics, history: nextHistory, step: 1 }, { onConflict: "user_id" })
         .select("basics, history")
         .single();
 
@@ -509,6 +543,7 @@ export default function RecordFieldPage() {
       setValue(mergedBasics[field] ?? "");
       setInfo("Antwort gespeichert.");
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
+      void sendToWebhook({ snippet: trimmed, full: mergedBasics[field] ?? trimmed });
     } catch (err) {
       console.error("fast/record save error", err);
       setError("Speichern fehlgeschlagen.");
