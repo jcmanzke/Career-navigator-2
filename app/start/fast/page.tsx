@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
-import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT, N8N_WEBHOOK_URL } from "@/lib/n8n";
+import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
 import { Basics, FieldKey, HistoryRecord, emptyHistory, normalizeHistory } from "./shared";
 
 function cls(...xs: (string | false | null | undefined)[]) {
@@ -162,7 +162,7 @@ export default function FastTrack() {
     setLoading(true);
     setResults(null);
     try {
-      const res = await fetch(N8N_WEBHOOK_URL, {
+      const res = await fetch("/api/fast-track-webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
         body: JSON.stringify({ userId, sessionId, basics }),
@@ -287,14 +287,11 @@ export default function FastTrack() {
                       setChatMessages([]);
                       try {
                         const payload = { summary: basics };
-                        const res = await fetch(
-                          N8N_WEBHOOK_URL,
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                            body: JSON.stringify(payload),
-                          },
-                        );
+                        const res = await fetch("/api/fast-track-webhook", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                          body: JSON.stringify(payload),
+                        });
                         const text = await res.text();
                         setChatMessages([{ role: "assistant", content: text }]);
                       } catch (e) {
@@ -343,14 +340,11 @@ export default function FastTrack() {
                     setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
                     input.value = "";
                     try {
-                      const res = await fetch(
-                        N8N_WEBHOOK_URL,
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                          body: JSON.stringify({ summary: basics, followup: value }),
-                        },
-                      );
+                      const res = await fetch("/api/fast-track-webhook", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                        body: JSON.stringify({ summary: basics, followup: value }),
+                      });
                       const text = await res.text();
                       setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);
                     } catch (e) {

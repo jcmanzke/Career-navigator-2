@@ -455,7 +455,6 @@ export default function RecordFieldPage() {
         const sep = prev.endsWith(" ") ? "" : " ";
         return (prev + sep + trimmed).trim();
       });
-      setInfo("Transkription hinzugefügt.");
     } catch (err) {
       console.error("transcribe error", err);
       setError("Fehler bei der Transkription.");
