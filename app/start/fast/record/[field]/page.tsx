@@ -22,31 +22,76 @@ function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
 
-function RecordingOverlay({ fieldName, onStop }: { fieldName: string; onStop: () => void }) {
+function RecordingOverlay({
+  fieldName,
+  recording,
+  onToggle,
+  onClose,
+}: {
+  fieldName: string;
+  recording: boolean;
+  onToggle: () => void | Promise<void>;
+  onClose: () => void;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm text-neutrals-0 px-6">
       <div className="w-full max-w-md text-center space-y-8">
-        <p className="text-small uppercase tracking-[0.3em] text-white/70">Aufnahme läuft</p>
-        <h2 className="text-2xl font-semibold">Sprich über: {fieldName}</h2>
-        <div className="relative mx-auto flex h-52 w-52 items-center justify-center">
-          <div className="absolute inset-0 rounded-full cn-pulse-ring" aria-hidden="true" />
-          <div className="absolute inset-6 rounded-full cn-pulse-ring-delay" aria-hidden="true" />
-          <div className="relative flex h-28 w-28 items-center justify-center rounded-full bg-primary-500 text-[#2C2C2C] shadow-elevation4">
-            <span role="img" aria-hidden="true" className="text-4xl">
-              🎙️
-            </span>
-          </div>
-        </div>
-        <p className="text-neutrals-200">
-          Du kannst jederzeit auf „Aufnahme beenden“ tippen. Deine Aufnahme wird anschließend automatisch übertragen.
+        <p className="text-small uppercase tracking-[0.3em] text-white/70">
+          {recording ? "Aufnahme läuft" : "Bereit für deine Stimme"}
         </p>
+        <h2 className="text-2xl font-semibold">Sprich über: {fieldName}</h2>
         <button
           type="button"
-          onClick={onStop}
-          className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 font-semibold text-[#1D252A] shadow-elevation3 hover:bg-neutrals-100"
+          onClick={() => {
+            void onToggle();
+          }}
+          className="group relative mx-auto flex h-52 w-52 items-center justify-center rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-200"
+          aria-label={recording ? "Aufnahme beenden" : "Aufnahme starten"}
         >
-          Aufnahme beenden
+          <span
+            className={cls(
+              "absolute inset-0 rounded-full border border-white/20 transition-opacity",
+              recording ? "opacity-100" : "opacity-40",
+            )}
+            aria-hidden="true"
+          />
+          <span
+            className={cls(
+              "absolute inset-0 rounded-full cn-pulse-ring",
+              recording ? "opacity-100" : "opacity-0",
+            )}
+            aria-hidden="true"
+          />
+          <span
+            className={cls(
+              "absolute inset-6 rounded-full cn-pulse-ring-delay",
+              recording ? "opacity-100" : "opacity-0",
+            )}
+            aria-hidden="true"
+          />
+          <span
+            className={cls(
+              "relative flex h-32 w-32 items-center justify-center rounded-full bg-primary-500 text-[#2C2C2C] shadow-elevation4 transition-transform",
+              recording ? "scale-110" : "scale-100",
+            )}
+          >
+            <span className={cls("text-4xl", recording && "text-3xl font-semibold")}>{recording ? "■" : "🎙️"}</span>
+          </span>
         </button>
+        <p className="text-neutrals-200">
+          {recording
+            ? "Tippe erneut auf den Kreis, um die Aufnahme zu beenden."
+            : "Tippe auf den Kreis, um die Aufnahme zu starten und beginne zu sprechen."}
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10"
+          >
+            Später fortsetzen
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -89,11 +134,13 @@ export default function RecordFieldPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasOpenedRecorderRef = useRef(false);
 
   useEffect(() => {
     if (!field) {
@@ -166,6 +213,13 @@ export default function RecordFieldPage() {
       active = false;
     };
   }, [field, router]);
+
+  useEffect(() => {
+    if (!loading && !hasOpenedRecorderRef.current) {
+      hasOpenedRecorderRef.current = true;
+      setRecorderOpen(true);
+    }
+  }, [loading]);
 
   useEffect(() => {
     return () => {
@@ -260,10 +314,34 @@ export default function RecordFieldPage() {
           recorder.requestData();
         } catch {}
         recorder.stop();
+        setRecorderOpen(false);
       }
     } catch (err) {
       console.error("record stop error", err);
     }
+  };
+
+  const handleToggleRecording = async () => {
+    if (transcribing) return;
+    if (recording) {
+      stopRecording();
+    } else {
+      await startRecording();
+    }
+  };
+
+  const handleCloseRecorder = () => {
+    if (recording) {
+      stopRecording();
+    } else {
+      setRecorderOpen(false);
+    }
+  };
+
+  const openRecorder = () => {
+    setError(null);
+    setInfo(null);
+    setRecorderOpen(true);
   };
 
   const transcribeChunks = async () => {
@@ -401,27 +479,28 @@ export default function RecordFieldPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={recording ? stopRecording : startRecording}
-                  className={cls(
-                    "inline-flex items-center gap-2 rounded-xl px-4 py-2 font-semibold",
-                    recording ? "bg-red-500 text-white" : "bg-primary-500 text-[#2C2C2C]",
-                  )}
-                  disabled={transcribing}
+                  onClick={openRecorder}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 font-semibold text-[#2C2C2C] transition-transform hover:scale-[1.01] disabled:opacity-60"
+                  disabled={recording || transcribing}
                 >
                   <span role="img" aria-hidden="true">
                     🎙️
                   </span>
-                  {recording ? "Aufnahme beenden" : "Aufnahme starten"}
+                  Neue Sprachaufnahme
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2 border font-semibold"
+                  className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-semibold disabled:opacity-60"
                   disabled={saving || !value.trim()}
                 >
                   {saving ? "Speichere…" : "Übernehmen"}
                 </button>
-                {transcribing && <span className="text-small text-neutrals-500">Transkribiere…</span>}
+                {(recording || transcribing) && (
+                  <span className="text-small text-neutrals-500">
+                    {recording ? "Aufnahme läuft…" : "Transkribiere…"}
+                  </span>
+                )}
               </div>
 
               {error && <div className="rounded-xl border border-semantic-error-base bg-semantic-error-surface px-3 py-2 text-semantic-error-base">{error}</div>}
@@ -446,7 +525,14 @@ export default function RecordFieldPage() {
           </section>
         ) : null}
       </div>
-      {recording && <RecordingOverlay fieldName={fieldLabelText} onStop={stopRecording} />}
+      {recorderOpen && (
+        <RecordingOverlay
+          fieldName={fieldLabelText}
+          recording={recording}
+          onToggle={handleToggleRecording}
+          onClose={handleCloseRecorder}
+        />
+      )}
       {transcribing && !recording && <SendingOverlay message="Übertrage deine Antwort…" />}
     </main>
   );

@@ -195,65 +195,48 @@ export default function FastTrack() {
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
               <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
               <p className="text-neutrals-700 mb-4">Statt Tippen: per Stimme aufnehmen. Jede Eingabe öffnet ein Pop‑up zur Sprachaufnahme.</p>
-              <button
-                type="button"
-                onClick={() => router.push("/start/fast/voice")}
-                className="w-full mb-6 rounded-2xl border border-primary-200 bg-primary-50 px-5 py-4 text-left shadow-sm transition hover:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                aria-label="Sprachaufnahme öffnen"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-600">Sprach-Coach</p>
-                    <p className="text-xl font-semibold text-[#1D252A]">Aufnahme starten</p>
-                    <p className="text-sm text-[#1D252A]/70">
-                      Öffne den Vollbildmodus, um deine Stimme bequem aufzunehmen.
-                    </p>
-                  </div>
-                  <span aria-hidden="true" className="text-3xl text-primary-600">›</span>
-                </div>
-              </button>
-              <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
                 {(([
                   { key: "background", label: "Ausbildung und beruflicher Hintergrund" },
                   { key: "current", label: "Aktuelle Rolle" },
                   { key: "goals", label: "Ziele und Interessen" },
-                ] as { key: FieldKey; label: string }[])).map((item) => (
-                  <div key={item.key} className="rounded-2xl border p-4 bg-neutrals-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="font-medium">{item.label}</div>
-                        <div className="mt-1 space-y-1">
-                          <div className="text-small text-neutrals-600 line-clamp-2">
-                            {(basics as any)[item.key] ? (basics as any)[item.key] : "Noch keine Eingabe"}
-                          </div>
-                        </div>
+                ] as { key: FieldKey; label: string }[])).map((item) => {
+                  const entries = history[item.key] ?? [];
+                  const latestEntry = entries[entries.length - 1];
+                  const preview = latestEntry?.text || (basics as any)[item.key];
+                  const hasRecording = Boolean(preview);
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => router.push(`/start/fast/record/${item.key}`)}
+                      className={cls(
+                        "group flex flex-col justify-between rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 text-left shadow-sm transition-shadow",
+                        "hover:shadow-elevation3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
+                      )}
+                      aria-label={`Aufnahme starten: ${item.label}`}
+                    >
+                      <div className="space-y-2">
+                        <span className="text-base font-medium text-neutrals-900">{item.label}</span>
+                        <span className="block text-small text-neutrals-600 line-clamp-3">
+                          {hasRecording ? preview : "Noch keine Aufnahme gespeichert"}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/start/fast/record/${item.key}`)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            router.push(`/start/fast/record/${item.key}`);
-                          }
-                        }}
-                        className="shrink-0 h-10 px-4 rounded-xl bg-primary-500 text-[#2C2C2C] font-semibold"
-                        aria-label={`Aufnehmen: ${item.label}`}
-                      >
-                        Aufnehmen
-                      </button>
-                    </div>
-                    {history[item.key]?.length ? (
-                      <div className="mt-3 w-full rounded-xl bg-green-50 text-green-700 border border-green-200 px-3 py-2 flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="12" r="10" fill="#22C55E"/>
-                          <path d="M8 12.5l2.5 2.5L16 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span>Übertragung erfolgreich</span>
+                      <div className="mt-6 flex items-center gap-3 text-sm font-semibold text-primary-600">
+                        <span
+                          className={cls(
+                            "flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary-200 bg-primary-100 text-2xl transition-transform group-hover:scale-105",
+                            hasRecording && "border-semantic-success-base bg-semantic-success-surface text-semantic-success-base",
+                          )}
+                          aria-hidden="true"
+                        >
+                          🎙️
+                        </span>
+                        <span>{hasRecording ? "Erneut aufnehmen" : "Tippen zum Aufnehmen"}</span>
                       </div>
-                    ) : null}
-                  </div>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
               <div className="flex justify-end pt-6">
                 <button
