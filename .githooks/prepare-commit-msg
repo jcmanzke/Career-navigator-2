@@ -1,15 +1,16 @@
 #!/bin/sh
 
-# For merge commits or templates that already filled in text, leave as-is.
-if [ -s "$1" ]; then
-  exit 0
+MESSAGE_FILE="$1"
+
+# If the file already has real content (not just comments/blank lines), keep it.
+if [ -f "$MESSAGE_FILE" ]; then
+  if sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$MESSAGE_FILE" | grep -q '.'; then
+    exit 0
+  fi
 fi
 
-# Use branch name when available; default to 'main'.
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo main)
-
-# Replace slashes/spaces so the message is tidy.
 BRANCH_SLUG=$(echo "$BRANCH" | tr '/ ' '-')
+DEFAULT_MESSAGE="chore(${BRANCH_SLUG}): update"
 
-# Pre-fill commit message; feel free to edit before finalising.
-echo "chore(${BRANCH_SLUG}): update" > "$1"
+echo "$DEFAULT_MESSAGE" > "$MESSAGE_FILE"
