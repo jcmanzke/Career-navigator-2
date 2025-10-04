@@ -16,6 +16,25 @@ export const emptyHistory: HistoryRecord = {
   goals: [],
 };
 
+export function sanitizePlainText(input: string): string {
+  if (!input) return "";
+  let text = String(input);
+  text = text.replace(/```[\s\S]*?```/g, " ");
+  text = text.replace(/`([^`]+)`/g, "$1");
+  text = text.replace(/!\[[^\]]*\]\([^)]*\)/g, " ");
+  text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  text = text.replace(/^#{1,6}\s*/gm, "");
+  text = text.replace(/(\*\*|__)(.*?)\1/g, "$2");
+  text = text.replace(/(\*|_)(.*?)\1/g, "$2");
+  text = text.replace(/~~(.*?)~~/g, "$1");
+  text = text.replace(/^>\s?/gm, "");
+  text = text.replace(/^\s*[-+*]\s+/gm, "");
+  text = text.replace(/^\s*\d+\.\s+/gm, "");
+  text = text.replace(/^(-\s?){3,}$/gm, "");
+  text = text.replace(/\s+/g, " ");
+  return text.trim();
+}
+
 export function normalizeHistory(value: any): HistoryRecord {
   const base: HistoryRecord = { ...emptyHistory };
   (Object.keys(base) as FieldKey[]).forEach((key) => {
@@ -24,7 +43,7 @@ export function normalizeHistory(value: any): HistoryRecord {
       .filter((entry: any) => entry && typeof entry.text === "string")
       .map((entry: any) => ({
         timestamp: typeof entry.timestamp === "number" ? entry.timestamp : Date.now(),
-        text: String(entry.text),
+        text: sanitizePlainText(String(entry.text)),
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   });

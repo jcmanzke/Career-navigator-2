@@ -6,7 +6,7 @@ import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
-import { Basics, FieldKey, HistoryRecord, emptyHistory, normalizeHistory } from "./shared";
+import { Basics, FieldKey, HistoryRecord, emptyHistory, normalizeHistory, sanitizePlainText } from "./shared";
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -84,7 +84,12 @@ export default function FastTrack() {
           setSessionId(row.id);
           const nextStep = typeof row.step === "number" && row.step >= 1 ? row.step : 1;
           setStep(nextStep);
-          if (row.basics) setBasics({ background: row.basics.background || "", current: row.basics.current || "", goals: row.basics.goals || "" });
+          if (row.basics)
+            setBasics({
+              background: sanitizePlainText(row.basics.background || ""),
+              current: sanitizePlainText(row.basics.current || ""),
+              goals: sanitizePlainText(row.basics.goals || ""),
+            });
           if (row.history) setHistory(normalizeHistory(row.history));
           if (row.results) setResults(row.results);
         } else {
@@ -165,7 +170,7 @@ export default function FastTrack() {
       const res = await fetch("/api/fast-track-webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-        body: JSON.stringify({ userId, sessionId, basics }),
+        body: JSON.stringify({ userId, sessionId, basics, history }),
       });
       const text = await res.text();
       let data: any;
@@ -290,7 +295,7 @@ export default function FastTrack() {
                         const res = await fetch("/api/fast-track-webhook", {
                           method: "POST",
                           headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                          body: JSON.stringify(payload),
+                          body: JSON.stringify({ ...payload, history }),
                         });
                         const text = await res.text();
                         setChatMessages([{ role: "assistant", content: text }]);
@@ -343,7 +348,7 @@ export default function FastTrack() {
                       const res = await fetch("/api/fast-track-webhook", {
                         method: "POST",
                         headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                        body: JSON.stringify({ summary: basics, followup: value }),
+                        body: JSON.stringify({ summary: basics, followup: value, history }),
                       });
                       const text = await res.text();
                       setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);

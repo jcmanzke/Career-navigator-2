@@ -13,6 +13,7 @@ import {
   fieldLabel,
   inputFieldLabel,
   normalizeHistory,
+  sanitizePlainText,
 } from "../../shared";
 import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
 
@@ -211,9 +212,9 @@ export default function RecordFieldPage() {
 
         if (row) {
           basicsData = {
-            background: row.basics?.background ?? "",
-            current: row.basics?.current ?? "",
-            goals: row.basics?.goals ?? "",
+            background: sanitizePlainText(row.basics?.background ?? ""),
+            current: sanitizePlainText(row.basics?.current ?? ""),
+            goals: sanitizePlainText(row.basics?.goals ?? ""),
           };
           historyData = normalizeHistory(row.history);
         } else {
@@ -224,9 +225,9 @@ export default function RecordFieldPage() {
             .single();
           if (insertError) throw insertError;
           basicsData = {
-            background: created?.basics?.background ?? "",
-            current: created?.basics?.current ?? "",
-            goals: created?.basics?.goals ?? "",
+            background: sanitizePlainText(created?.basics?.background ?? ""),
+            current: sanitizePlainText(created?.basics?.current ?? ""),
+            goals: sanitizePlainText(created?.basics?.goals ?? ""),
           };
           historyData = normalizeHistory(created?.history);
         }
@@ -444,7 +445,10 @@ export default function RecordFieldPage() {
         fd.append("file", blob, `audio-${field}-${Date.now()}.${ext}`);
         fd.append("userId", userId);
         fd.append("field", field);
-        if (currentValue) fd.append("existingText", currentValue);
+        const sanitizedCurrent = sanitizePlainText(currentValue);
+        fd.append("currentText", sanitizedCurrent);
+        fd.append("existingText", sanitizedCurrent);
+        fd.append("fieldHistory", JSON.stringify(history[field] ?? []));
         const response = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
@@ -515,26 +519,7 @@ export default function RecordFieldPage() {
           return trimmed;
         };
 
-        const stripMarkdown = (input: string): string => {
-          if (!input) return "";
-          let text = input;
-          text = text.replace(/```[\s\S]*?```/g, "");
-          text = text.replace(/`([^`]+)`/g, "$1");
-          text = text.replace(/!\[[^\]]*\]\([^)]*\)/g, "");
-          text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
-          text = text.replace(/^#{1,6}\s*/gm, "");
-          text = text.replace(/(\*\*|__)(.*?)\1/g, "$2");
-          text = text.replace(/(\*|_)(.*?)\1/g, "$2");
-          text = text.replace(/~~(.*?)~~/g, "$1");
-          text = text.replace(/^>\s?/gm, "");
-          text = text.replace(/^\s*[-+*]\s+/gm, "");
-          text = text.replace(/^\s*\d+\.\s+/gm, "");
-          text = text.replace(/^(-\s?){3,}$/gm, "");
-          text = text.replace(/\s+/g, " ");
-          return text.trim();
-        };
-
-        const transcript = stripMarkdown(extractTranscript(payloadText));
+        const transcript = sanitizePlainText(extractTranscript(payloadText));
         if (transcript) {
           const cleaned = transcript.trim();
           const previous = valueRef.current.trim();
@@ -556,7 +541,7 @@ export default function RecordFieldPage() {
         setTranscribing(false);
       }
     },
-    [field, userId],
+    [field, history, userId],
   );
 
   const handleSave = async () => {
@@ -574,10 +559,11 @@ export default function RecordFieldPage() {
     setError(null);
     setInfo(null);
     try {
+      const cleanedCurrent = sanitizePlainText(trimmed);
       const supabase = createClient();
-      const nextBasics: Basics = { ...basics, [field]: trimmed };
+      const nextBasics: Basics = { ...basics, [field]: cleanedCurrent };
       const existing: HistoryEntry[] = history[field] ?? [];
-      const nextEntries = [...existing, { timestamp: Date.now(), text: trimmed }];
+      const nextEntries = [...existing, { timestamp: Date.now(), text: cleanedCurrent }];
       const limitedEntries = nextEntries.slice(-HISTORY_LIMIT);
       const nextHistory: HistoryRecord = {
         ...history,
@@ -593,9 +579,9 @@ export default function RecordFieldPage() {
       if (upsertError) throw upsertError;
 
       const mergedBasics: Basics = {
-        background: data?.basics?.background ?? "",
-        current: data?.basics?.current ?? "",
-        goals: data?.basics?.goals ?? "",
+        background: sanitizePlainText(data?.basics?.background ?? ""),
+        current: sanitizePlainText(data?.basics?.current ?? ""),
+        goals: sanitizePlainText(data?.basics?.goals ?? ""),
       };
       const mergedHistory = normalizeHistory(data?.history);
 
