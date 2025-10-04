@@ -462,20 +462,51 @@ export default function RecordFieldPage() {
           if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
             try {
               const parsed = JSON.parse(trimmed);
-              const tryCandidates = (
-                candidates: Array<unknown>,
-              ): string => candidates.find((c): c is string => typeof c === "string" && c.trim().length > 0)?.trim() || "";
-              const pick = tryCandidates([
-                (parsed as any)?.transcript,
-                (parsed as any)?.text,
-                (parsed as any)?.value,
-                (parsed as any)?.message,
-                (parsed as any)?.result,
-                (parsed as any)?.response,
-                (parsed as any)?.data,
-                (parsed as any)?.data?.text,
-                Array.isArray(parsed) ? (parsed as any[]).map((item) => (typeof item === "string" ? item : item?.text)).filter(Boolean).join(" ") : "",
-              ]);
+              const candidateKeys = [
+                "transcript",
+                "text",
+                "value",
+                "message",
+                "result",
+                "response",
+                "output",
+                "content",
+                "data",
+                "summary",
+                "answer",
+              ];
+              const extractFromNode = (node: unknown, depth = 0): string => {
+                if (!node || depth > 6) return "";
+                if (typeof node === "string") {
+                  const s = node.trim();
+                  return s.length ? s : "";
+                }
+                if (typeof node === "number") {
+                  return String(node);
+                }
+                if (Array.isArray(node)) {
+                  const collected = node
+                    .map((item) => extractFromNode(item, depth + 1))
+                    .filter((part) => part.length > 0);
+                  return collected.join(" ").trim();
+                }
+                if (typeof node === "object") {
+                  const obj = node as Record<string, unknown>;
+                  for (const key of candidateKeys) {
+                    if (key in obj) {
+                      const found = extractFromNode(obj[key], depth + 1);
+                      if (found) return found;
+                    }
+                  }
+                  // fall back to other values
+                  for (const value of Object.values(obj)) {
+                    const found = extractFromNode(value, depth + 1);
+                    if (found) return found;
+                  }
+                }
+                return "";
+              };
+              const pick = extractFromNode(parsed);
               if (pick) return pick;
             } catch {
               // fall back below
