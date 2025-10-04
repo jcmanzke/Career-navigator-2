@@ -300,19 +300,23 @@ export default function RecordFieldPage() {
       shouldUploadRef.current = false;
       mimeTypeRef.current = options?.mimeType || recorder.mimeType || "audio/webm";
 
+      const finalizeUpload = () => {
+        if (!shouldUploadRef.current) return;
+        const chunks = chunksRef.current.slice();
+        if (!chunks.length) return;
+        shouldUploadRef.current = false;
+        chunksRef.current = [];
+        const type = chunks[0]?.type || mimeTypeRef.current || "audio/webm";
+        const blob = new Blob(chunks, { type });
+        void uploadRecording(blob);
+      };
+
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
         if (shouldUploadRef.current && recorder.state === "inactive") {
-          const chunks = chunksRef.current.slice();
-          chunksRef.current = [];
-          shouldUploadRef.current = false;
-          if (chunks.length) {
-            const type = chunks[0]?.type || mimeTypeRef.current || "audio/webm";
-            const blob = new Blob(chunks, { type });
-            void uploadRecording(blob);
-          }
+          finalizeUpload();
         }
       };
       recorder.onstop = () => {
@@ -326,7 +330,9 @@ export default function RecordFieldPage() {
           clearInterval(flushTimerRef.current);
           flushTimerRef.current = null;
         }
-        if (!shouldUploadRef.current) {
+        if (shouldUploadRef.current) {
+          finalizeUpload();
+        } else {
           chunksRef.current = [];
         }
       };
