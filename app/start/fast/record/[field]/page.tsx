@@ -170,6 +170,11 @@ export default function RecordFieldPage() {
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasOpenedRecorderRef = useRef(false);
   const skipTranscribeRef = useRef(false);
+  const valueRef = useRef("");
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     if (!field) {
@@ -476,18 +481,13 @@ export default function RecordFieldPage() {
         throw new Error(data?.detail || data?.error || "Transkription fehlgeschlagen");
       }
       const trimmedSnippet = String(data.text).trim();
-      let nextValue = "";
-      setValue((prev) => {
-        if (!prev) {
-          nextValue = trimmedSnippet;
-          return trimmedSnippet;
-        }
-        const sep = prev.endsWith(" ") ? "" : " ";
-        nextValue = (prev + sep + trimmedSnippet).trim();
-        return nextValue;
-      });
       if (trimmedSnippet) {
-        void sendToWebhook({ snippet: trimmedSnippet, full: nextValue || trimmedSnippet });
+        const prevValue = valueRef.current;
+        const sep = prevValue.endsWith(" ") || prevValue === "" ? "" : " ";
+        const updated = (prevValue ? prevValue + sep + trimmedSnippet : trimmedSnippet).trim();
+        valueRef.current = updated;
+        setValue(updated);
+        void sendToWebhook({ snippet: trimmedSnippet, full: updated });
       }
     } catch (err) {
       console.error("transcribe error", err);
@@ -504,7 +504,7 @@ export default function RecordFieldPage() {
       setError("Bitte melde dich an, um zu speichern.");
       return;
     }
-    const trimmed = value.trim();
+    const trimmed = valueRef.current.trim();
     if (!trimmed) {
       setError("Bitte zuerst etwas aufnehmen oder eingeben.");
       return;
@@ -540,7 +540,9 @@ export default function RecordFieldPage() {
 
       setBasics(mergedBasics);
       setHistory(mergedHistory);
-      setValue(mergedBasics[field] ?? "");
+      const refreshedValue = mergedBasics[field] ?? "";
+      valueRef.current = refreshedValue;
+      setValue(refreshedValue);
       setInfo("Antwort gespeichert.");
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
       void sendToWebhook({ snippet: trimmed, full: mergedBasics[field] ?? trimmed });
