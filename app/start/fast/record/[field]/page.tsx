@@ -455,17 +455,45 @@ export default function RecordFieldPage() {
         if (!response.ok) {
           throw new Error(payloadText || "Upload fehlgeschlagen");
         }
-        let transcript = "";
-        try {
-          const parsed = JSON.parse(payloadText);
-          transcript = parsed.transcript || parsed.text || parsed.value || "";
-        } catch {
-          transcript = payloadText;
-        }
-        if (typeof transcript === "string" && transcript.trim()) {
+        const extractTranscript = (raw: string): string => {
+          const trimmed = raw.trim();
+          if (!trimmed) return "";
+          if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              const tryCandidates = (
+                candidates: Array<unknown>,
+              ): string => candidates.find((c): c is string => typeof c === "string" && c.trim().length > 0)?.trim() || "";
+              const pick = tryCandidates([
+                (parsed as any)?.transcript,
+                (parsed as any)?.text,
+                (parsed as any)?.value,
+                (parsed as any)?.message,
+                (parsed as any)?.result,
+                (parsed as any)?.response,
+                (parsed as any)?.data,
+                (parsed as any)?.data?.text,
+                Array.isArray(parsed) ? (parsed as any[]).map((item) => (typeof item === "string" ? item : item?.text)).filter(Boolean).join(" ") : "",
+              ]);
+              if (pick) return pick;
+            } catch {
+              // fall back below
+            }
+          }
+          return trimmed;
+        };
+
+        const transcript = extractTranscript(payloadText);
+        if (transcript) {
           const cleaned = transcript.trim();
-          valueRef.current = cleaned;
-          setValue(cleaned);
+          const previous = valueRef.current.trim();
+          const merged = !previous
+            ? cleaned
+            : cleaned.startsWith(previous)
+            ? cleaned
+            : `${previous} ${cleaned}`.replace(/\s+/g, " ").trim();
+          valueRef.current = merged;
+          setValue(merged);
           setInfo("Transkription empfangen.");
         } else {
           setInfo("Aufnahme gesendet.");
