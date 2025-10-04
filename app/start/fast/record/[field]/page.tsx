@@ -235,8 +235,9 @@ export default function RecordFieldPage() {
         if (!active) return;
         setBasics(basicsData);
         setHistory(historyData);
-        valueRef.current = "";
-        setValue("");
+        const initialValue = basicsData[field] ?? "";
+        valueRef.current = initialValue;
+        setValue(initialValue);
       } catch (err) {
         console.error("fast/record load error", err);
         if (active) setError("Konnte Sitzung nicht laden.");
