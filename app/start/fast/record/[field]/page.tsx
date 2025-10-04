@@ -310,6 +310,16 @@ export default function RecordFieldPage() {
         if (event.data && event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
+        if (shouldUploadRef.current && recorder.state === "inactive") {
+          const chunks = chunksRef.current.slice();
+          chunksRef.current = [];
+          shouldUploadRef.current = false;
+          if (chunks.length) {
+            const type = chunks[0]?.type || mimeTypeRef.current || "audio/webm";
+            const blob = new Blob(chunks, { type });
+            void uploadRecording(blob);
+          }
+        }
       };
       recorder.onstop = () => {
         try {
@@ -322,14 +332,8 @@ export default function RecordFieldPage() {
           clearInterval(flushTimerRef.current);
           flushTimerRef.current = null;
         }
-        const shouldUpload = shouldUploadRef.current;
-        shouldUploadRef.current = false;
-        const chunks = chunksRef.current;
-        chunksRef.current = [];
-        if (shouldUpload && chunks.length) {
-          const type = chunks[0]?.type || mimeTypeRef.current || "audio/webm";
-          const blob = new Blob(chunks, { type });
-          void uploadRecording(blob);
+        if (!shouldUploadRef.current) {
+          chunksRef.current = [];
         }
       };
 
