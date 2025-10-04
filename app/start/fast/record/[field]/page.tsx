@@ -438,6 +438,73 @@ export default function RecordFieldPage() {
     setRecorderOpen(true);
   };
 
+  const saveFieldValue = useCallback(
+    async (
+      rawText: string,
+      { addHistory = true, silent = false }: { addHistory?: boolean; silent?: boolean } = {},
+    ): Promise<boolean> => {
+      if (!field || !userId) return false;
+      const trimmed = sanitizePlainText(rawText).trim();
+      if (!trimmed) return false;
+
+      if (!silent) {
+        setSaving(true);
+        setError(null);
+        setInfo(null);
+      }
+
+      try {
+        const supabase = createClient();
+        const nextBasics: Basics = { ...basics, [field]: trimmed };
+        const existing: HistoryEntry[] = history[field] ?? [];
+        const lastEntry = existing[existing.length - 1]?.text ?? "";
+        const shouldAppend = addHistory && sanitizePlainText(lastEntry) !== trimmed;
+        const nextEntries = shouldAppend ? [...existing, { timestamp: Date.now(), text: trimmed }] : existing;
+        const limitedEntries = shouldAppend ? nextEntries.slice(-HISTORY_LIMIT) : existing;
+        const nextHistory: HistoryRecord = shouldAppend
+          ? { ...history, [field]: limitedEntries }
+          : history;
+
+        const { data, error: upsertError } = await supabase
+          .from("fast_scan_sessions")
+          .upsert(
+            {
+              user_id: userId,
+              basics: nextBasics,
+              history: nextHistory,
+              step: 1,
+            },
+            { onConflict: "user_id" },
+          )
+          .select("basics, history")
+          .single();
+
+        if (upsertError) throw upsertError;
+
+        const mergedBasics: Basics = {
+          background: sanitizePlainText(data?.basics?.background ?? ""),
+          current: sanitizePlainText(data?.basics?.current ?? ""),
+          goals: sanitizePlainText(data?.basics?.goals ?? ""),
+        };
+        const mergedHistory = normalizeHistory(data?.history);
+
+        setBasics(mergedBasics);
+        setHistory(mergedHistory);
+        valueRef.current = trimmed;
+        setValue(trimmed);
+        if (!silent) setInfo("Antwort gespeichert.");
+        return true;
+      } catch (err) {
+        console.error("fast/record save error", err);
+        if (!silent) setError("Speichern fehlgeschlagen.");
+        return false;
+      } finally {
+        if (!silent) setSaving(false);
+      }
+    },
+    [basics, field, history, userId],
+  );
+
   const uploadRecording = useCallback(
     async (blob: Blob) => {
       if (!userId || !field) return;
@@ -455,6 +522,7 @@ export default function RecordFieldPage() {
         fd.append("currentText", sanitizedCurrent);
         fd.append("existingText", sanitizedCurrent);
         fd.append("fieldHistory", JSON.stringify(history[field] ?? []));
+        fd.append("history", JSON.stringify(history));
         const response = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
@@ -536,7 +604,9 @@ export default function RecordFieldPage() {
             : `${previous} ${cleaned}`.replace(/\s+/g, " ").trim();
           valueRef.current = merged;
           setValue(merged);
-          setInfo("Transkription empfangen.");
+          const saved = await saveFieldValue(merged, { addHistory: true, silent: true });
+          if (saved) setInfo("Transkription empfangen.");
+          else setError("Speichern fehlgeschlagen.");
         } else {
           setInfo("Aufnahme gesendet.");
         }
@@ -547,7 +617,7 @@ export default function RecordFieldPage() {
         setTranscribing(false);
       }
     },
-    [field, history, userId],
+    [field, history, saveFieldValue, userId],
   );
 
   const handleSave = async () => {
@@ -561,47 +631,9 @@ export default function RecordFieldPage() {
       setError("Bitte zuerst etwas aufnehmen oder eingeben.");
       return;
     }
-    setSaving(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const cleanedCurrent = sanitizePlainText(trimmed);
-      const supabase = createClient();
-      const nextBasics: Basics = { ...basics, [field]: cleanedCurrent };
-      const existing: HistoryEntry[] = history[field] ?? [];
-      const nextEntries = [...existing, { timestamp: Date.now(), text: cleanedCurrent }];
-      const limitedEntries = nextEntries.slice(-HISTORY_LIMIT);
-      const nextHistory: HistoryRecord = {
-        ...history,
-        [field]: limitedEntries,
-      };
-
-      const { data, error: upsertError } = await supabase
-        .from("fast_scan_sessions")
-        .upsert({ user_id: userId, basics: nextBasics, history: nextHistory, step: 1 }, { onConflict: "user_id" })
-        .select("basics, history")
-        .single();
-
-      if (upsertError) throw upsertError;
-
-      const mergedBasics: Basics = {
-        background: sanitizePlainText(data?.basics?.background ?? ""),
-        current: sanitizePlainText(data?.basics?.current ?? ""),
-        goals: sanitizePlainText(data?.basics?.goals ?? ""),
-      };
-      const mergedHistory = normalizeHistory(data?.history);
-
-      setBasics(mergedBasics);
-      setHistory(mergedHistory);
-      valueRef.current = "";
-      setValue("");
-      setInfo("Antwort gespeichert.");
+    const ok = await saveFieldValue(trimmed, { addHistory: true, silent: false });
+    if (ok) {
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
-    } catch (err) {
-      console.error("fast/record save error", err);
-      setError("Speichern fehlgeschlagen.");
-    } finally {
-      setSaving(false);
     }
   };
 
