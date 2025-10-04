@@ -52,7 +52,7 @@ export default function StartPage() {
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/Fast track picture.jpg')" }}
+            style={{ backgroundImage: "url('/Fast track picture-compressed.jpg')" }}
           />
           <div aria-hidden="true" className="absolute inset-0 bg-black/50" />
           <div className="relative flex min-h-80 flex-col p-6 md:p-8">
@@ -81,7 +81,7 @@ export default function StartPage() {
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/Deeo analysis picture.jpg')" }}
+            style={{ backgroundImage: "url('/Deep analysis picture-compressed.jpg')" }}
           />
           <div aria-hidden="true" className="absolute inset-0 bg-black/60" />
           <div className="relative flex min-h-80 flex-col p-6 md:p-8">
