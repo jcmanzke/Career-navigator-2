@@ -484,7 +484,26 @@ export default function RecordFieldPage() {
           return trimmed;
         };
 
-        const transcript = extractTranscript(payloadText);
+        const stripMarkdown = (input: string): string => {
+          if (!input) return "";
+          let text = input;
+          text = text.replace(/```[\s\S]*?```/g, "");
+          text = text.replace(/`([^`]+)`/g, "$1");
+          text = text.replace(/!\[[^\]]*\]\([^)]*\)/g, "");
+          text = text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+          text = text.replace(/^#{1,6}\s*/gm, "");
+          text = text.replace(/(\*\*|__)(.*?)\1/g, "$2");
+          text = text.replace(/(\*|_)(.*?)\1/g, "$2");
+          text = text.replace(/~~(.*?)~~/g, "$1");
+          text = text.replace(/^>\s?/gm, "");
+          text = text.replace(/^\s*[-+*]\s+/gm, "");
+          text = text.replace(/^\s*\d+\.\s+/gm, "");
+          text = text.replace(/^(-\s?){3,}$/gm, "");
+          text = text.replace(/\s+/g, " ");
+          return text.trim();
+        };
+
+        const transcript = stripMarkdown(extractTranscript(payloadText));
         if (transcript) {
           const cleaned = transcript.trim();
           const previous = valueRef.current.trim();
