@@ -169,7 +169,8 @@ export default function RecordFieldPage() {
   const chunksRef = useRef<Blob[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasOpenedRecorderRef = useRef(false);
-  const skipTranscribeRef = useRef(false);
+  const shouldUploadRef = useRef(false);
+  const mimeTypeRef = useRef<string>("audio/webm");
   const valueRef = useRef("");
 
   useEffect(() => {
@@ -302,6 +303,8 @@ export default function RecordFieldPage() {
       const recorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
       mediaRef.current = recorder;
       chunksRef.current = [];
+      shouldUploadRef.current = false;
+      mimeTypeRef.current = options?.mimeType || recorder.mimeType || "audio/webm";
 
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -319,7 +322,15 @@ export default function RecordFieldPage() {
           clearInterval(flushTimerRef.current);
           flushTimerRef.current = null;
         }
-        void transcribeChunks();
+        const shouldUpload = shouldUploadRef.current;
+        shouldUploadRef.current = false;
+        const chunks = chunksRef.current;
+        chunksRef.current = [];
+        if (shouldUpload && chunks.length) {
+          const type = chunks[0]?.type || mimeTypeRef.current || "audio/webm";
+          const blob = new Blob(chunks, { type });
+          void uploadRecording(blob);
+        }
       };
 
       try {
@@ -340,27 +351,23 @@ export default function RecordFieldPage() {
     }
   };
 
-  const stopRecording = ({ transcribe = true }: { transcribe?: boolean } = {}) => {
+  const stopRecording = ({ upload = true }: { upload?: boolean } = {}) => {
     const recorder = mediaRef.current;
+    shouldUploadRef.current = upload;
     if (!recorder || (!recording && !paused)) {
       setRecorderOpen(false);
       setRecording(false);
       setPaused(false);
       return;
     }
-    skipTranscribeRef.current = !transcribe;
     try {
       if (recorder.state === "recording") {
-        if (transcribe) {
-          try {
-            recorder.requestData();
-          } catch {}
-        }
+        try {
+          recorder.requestData();
+        } catch {}
         recorder.stop();
       } else if (recorder.state === "paused") {
         recorder.stop();
-      } else {
-        skipTranscribeRef.current = false;
       }
     } catch (err) {
       console.error("record stop error", err);
@@ -401,12 +408,12 @@ export default function RecordFieldPage() {
       await handlePauseResume();
       return;
     }
-    stopRecording({ transcribe: true });
+    stopRecording({ upload: true });
   };
 
   const handleSend = () => {
     if (recording || paused) {
-      stopRecording({ transcribe: true });
+      stopRecording({ upload: true });
     } else {
       setRecorderOpen(false);
     }
@@ -414,7 +421,7 @@ export default function RecordFieldPage() {
 
   const handleBack = () => {
     if (recording || paused) {
-      stopRecording({ transcribe: false });
+      stopRecording({ upload: false });
     } else {
       setRecorderOpen(false);
     }
@@ -427,76 +434,55 @@ export default function RecordFieldPage() {
     setRecorderOpen(true);
   };
 
-  const sendToWebhook = useCallback(
-    async ({ snippet, full }: { snippet: string; full: string }) => {
+  const uploadRecording = useCallback(
+    async (blob: Blob) => {
       if (!userId || !field) return;
       try {
-        const payload = {
-          userId,
-          field,
-          snippet,
-          value: full,
-        };
-        await fetch("/api/fast-track-webhook", {
+        setTranscribing(true);
+        setError(null);
+        setInfo(null);
+        const fd = new FormData();
+        const currentValue = valueRef.current;
+        const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
+        fd.append("file", blob, `audio-${field}-${Date.now()}.${ext}`);
+        fd.append("userId", userId);
+        fd.append("field", field);
+        if (currentValue) fd.append("existingText", currentValue);
+        const response = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
           },
-          body: JSON.stringify(payload),
+          body: fd,
         });
+        const payloadText = await response.text();
+        if (!response.ok) {
+          throw new Error(payloadText || "Upload fehlgeschlagen");
+        }
+        let transcript = "";
+        try {
+          const parsed = JSON.parse(payloadText);
+          transcript = parsed.transcript || parsed.text || parsed.value || "";
+        } catch {
+          transcript = payloadText;
+        }
+        if (typeof transcript === "string" && transcript.trim()) {
+          const cleaned = transcript.trim();
+          valueRef.current = cleaned;
+          setValue(cleaned);
+          setInfo("Transkription empfangen.");
+        } else {
+          setInfo("Aufnahme gesendet.");
+        }
       } catch (err) {
-        console.error("fast/record webhook error", err);
+        console.error("fast/record upload error", err);
+        setError("Aufnahme konnte nicht gesendet werden.");
+      } finally {
+        setTranscribing(false);
       }
     },
     [field, userId],
   );
-
-  const transcribeChunks = async () => {
-    if (!chunksRef.current.length) {
-      skipTranscribeRef.current = false;
-      return;
-    }
-    if (skipTranscribeRef.current) {
-      skipTranscribeRef.current = false;
-      chunksRef.current = [];
-      return;
-    }
-    setTranscribing(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const firstType = chunksRef.current[0]?.type || "audio/webm";
-      const blob = new Blob(chunksRef.current, { type: firstType });
-      const ext = firstType.includes("mp4") ? "mp4" : firstType.includes("ogg") ? "ogg" : "webm";
-      const fd = new FormData();
-      fd.append("file", blob, `audio.${ext}`);
-      const res = await fetch(`/api/transcribe?t=${Date.now()}`, {
-        method: "POST",
-        body: fd,
-        cache: "no-store",
-      } as RequestInit);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.text) {
-        throw new Error(data?.detail || data?.error || "Transkription fehlgeschlagen");
-      }
-      const trimmedSnippet = String(data.text).trim();
-      if (trimmedSnippet) {
-        const prevValue = valueRef.current;
-        const sep = prevValue.endsWith(" ") || prevValue === "" ? "" : " ";
-        const updated = (prevValue ? prevValue + sep + trimmedSnippet : trimmedSnippet).trim();
-        valueRef.current = updated;
-        setValue(updated);
-        void sendToWebhook({ snippet: trimmedSnippet, full: updated });
-      }
-    } catch (err) {
-      console.error("transcribe error", err);
-      setError("Fehler bei der Transkription.");
-    } finally {
-      chunksRef.current = [];
-      setTranscribing(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!field) return;
@@ -545,7 +531,6 @@ export default function RecordFieldPage() {
       setValue(refreshedValue);
       setInfo("Antwort gespeichert.");
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
-      void sendToWebhook({ snippet: trimmed, full: mergedBasics[field] ?? trimmed });
     } catch (err) {
       console.error("fast/record save error", err);
       setError("Speichern fehlgeschlagen.");
@@ -619,7 +604,7 @@ export default function RecordFieldPage() {
                 </button>
                 {(recording || transcribing) && (
                   <span className="text-small text-neutrals-500">
-                    {recording ? "Aufnahme läuft…" : "Transkribiere…"}
+                    {recording ? "Aufnahme läuft…" : "Übertrage…"}
                   </span>
                 )}
               </div>

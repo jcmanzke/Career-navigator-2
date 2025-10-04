@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const incomingContentType = req.headers.get("content-type") || "application/json";
     const contextHeader = req.headers.get(CONTEXT_HEADER_NAME) || FAST_TRACK_CONTEXT;
-    const bodyText = await req.text();
+    const bodyBuffer = await req.arrayBuffer();
 
     const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         "Content-Type": incomingContentType,
         [CONTEXT_HEADER_NAME]: contextHeader,
       },
-      body: bodyText,
+      body: bodyBuffer.byteLength ? bodyBuffer : undefined,
     });
 
     const responseBody = await webhookResponse.text();
