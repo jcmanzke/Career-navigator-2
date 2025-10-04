@@ -234,7 +234,8 @@ export default function RecordFieldPage() {
         if (!active) return;
         setBasics(basicsData);
         setHistory(historyData);
-        setValue(basicsData[field] ?? "");
+        valueRef.current = "";
+        setValue("");
       } catch (err) {
         console.error("fast/record load error", err);
         if (active) setError("Konnte Sitzung nicht laden.");
@@ -550,9 +551,8 @@ export default function RecordFieldPage() {
 
       setBasics(mergedBasics);
       setHistory(mergedHistory);
-      const refreshedValue = mergedBasics[field] ?? "";
-      valueRef.current = refreshedValue;
-      setValue(refreshedValue);
+      valueRef.current = "";
+      setValue("");
       setInfo("Antwort gespeichert.");
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
     } catch (err) {
