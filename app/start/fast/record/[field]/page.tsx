@@ -162,13 +162,12 @@ export default function RecordFieldPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(true);
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hasOpenedRecorderRef = useRef(false);
   const shouldUploadRef = useRef(false);
   const mimeTypeRef = useRef<string>("audio/webm");
   const valueRef = useRef("");
@@ -248,13 +247,6 @@ export default function RecordFieldPage() {
       active = false;
     };
   }, [field, router]);
-
-  useEffect(() => {
-    if (!loading && !hasOpenedRecorderRef.current) {
-      hasOpenedRecorderRef.current = true;
-      setRecorderOpen(true);
-    }
-  }, [loading]);
 
   useEffect(() => {
     return () => {
