@@ -20,6 +20,37 @@ import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
 const FIELD_KEYS: FieldKey[] = ["background", "current", "goals"];
 const HISTORY_LIMIT = 10;
 
+const FIELD_GUIDANCE: Record<FieldKey, { intro: string; hints: string[] }> = {
+  background: {
+    intro: "Erzähle kurz von deiner Ausbildung und deinem bisherigen Werdegang.",
+    hints: [
+      "Welche Stationen oder Abschlüsse waren besonders wichtig?",
+      "Gibt es Rollen oder Erfolge, die du hervorheben möchtest?",
+    ],
+  },
+  current: {
+    intro: "Beschreibe deine aktuelle Rolle so, als würdest du sie jemandem erklären, der dich nicht kennt.",
+    hints: [
+      "Was machst du täglich?",
+      "Welche Verantwortung oder Zielgrößen hast du?",
+      "Mit wem arbeitest du eng zusammen?",
+    ],
+  },
+  goals: {
+    intro: "Formuliere, wohin du dich entwickeln möchtest und was dir beruflich wichtig ist.",
+    hints: [
+      "Welche Ziele möchtest du erreichen?",
+      "Welche Themen oder Branchen reizen dich?",
+      "Welche Fähigkeiten würdest du gern ausbauen?",
+    ],
+  },
+};
+
+type ConversationMessage = {
+  role: "assistant" | "user";
+  text: string;
+};
+
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
@@ -164,6 +195,7 @@ export default function RecordFieldPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [recorderOpen, setRecorderOpen] = useState(true);
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -238,6 +270,14 @@ export default function RecordFieldPage() {
         const initialValue = basicsData[field] ?? "";
         valueRef.current = initialValue;
         setValue(initialValue);
+
+        const guidance = FIELD_GUIDANCE[field];
+        const guidanceMessages: ConversationMessage[] = [];
+        if (guidance) {
+          guidanceMessages.push({ role: "assistant", text: guidance.intro });
+          guidance.hints.forEach((hint) => guidanceMessages.push({ role: "assistant", text: hint }));
+        }
+        setMessages(guidanceMessages);
       } catch (err) {
         console.error("fast/record load error", err);
         if (active) setError("Konnte Sitzung nicht laden.");
@@ -493,6 +533,9 @@ export default function RecordFieldPage() {
         setHistory(mergedHistory);
         valueRef.current = trimmed;
         setValue(trimmed);
+        if (!silent && addHistory) {
+          setMessages((msgs) => [...msgs, { role: "assistant", text: trimmed }]);
+        }
         if (!silent) setInfo("Antwort gespeichert.");
         return true;
       } catch (err) {
@@ -503,7 +546,7 @@ export default function RecordFieldPage() {
         if (!silent) setSaving(false);
       }
     },
-    [basics, field, history, userId],
+    [basics, field, history, userId, setMessages],
   );
 
   const uploadRecording = useCallback(
@@ -606,8 +649,12 @@ export default function RecordFieldPage() {
           valueRef.current = merged;
           setValue(merged);
           const saved = await saveFieldValue(merged, { addHistory: true, silent: true });
-          if (saved) setInfo("Transkription empfangen.");
-          else setError("Speichern fehlgeschlagen.");
+          if (saved) {
+            setMessages((msgs) => [...msgs, { role: "assistant", text: cleaned }]);
+            setInfo("Transkription empfangen.");
+          } else {
+            setError("Speichern fehlgeschlagen.");
+          }
         } else {
           setInfo("Aufnahme gesendet.");
         }
@@ -618,7 +665,7 @@ export default function RecordFieldPage() {
         setTranscribing(false);
       }
     },
-    [field, history, saveFieldValue, userId],
+    [field, history, saveFieldValue, setMessages, userId],
   );
 
   const handleSave = async () => {
@@ -635,6 +682,15 @@ export default function RecordFieldPage() {
     const ok = await saveFieldValue(trimmed, { addHistory: true, silent: false });
     if (ok) {
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
+      const index = FIELD_KEYS.indexOf(field);
+      const nextField = FIELD_KEYS[index + 1];
+      setTimeout(() => {
+        if (nextField) {
+          router.push(`/start/fast/record/${nextField}`);
+        } else {
+          router.push("/start/fast");
+        }
+      }, 800);
     }
   };
 
@@ -661,6 +717,16 @@ export default function RecordFieldPage() {
             <p className="text-neutrals-600 mt-1">
               Sprich deine Antwort ein oder ergänze sie per Tastatur. Du kannst mehrere Aufnahmen machen; jede Transkription wird angehängt.
             </p>
+            {messages.length ? (
+              <div className="mt-4 space-y-2 rounded-2xl border border-neutrals-200 bg-white p-4">
+                <h2 className="text-small font-semibold text-neutrals-700">Hinweise</h2>
+                <ul className="space-y-1 text-small text-neutrals-700">
+                  {messages.map((msg, idx) => (
+                    <li key={idx} className="whitespace-pre-wrap">{msg.text}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
           {loading ? (
