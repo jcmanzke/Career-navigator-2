@@ -557,37 +557,30 @@ export default function RecordFieldPage() {
     setRecorderOpen(true);
   };
 
-  const requestSummary = useCallback(
-    async (latest: string) => {
-      if (!userId || !field) return;
+  const requestFeedback = useCallback(
+    async (summary: string) => {
+      if (!summary || !field) return;
       try {
         const res = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
-            "X-FastTrack-Mode": "summary",
+            "X-FastTrack-Mode": "feedback",
           },
-          body: JSON.stringify({ field, latestSummary: latest }),
+          body: JSON.stringify({ field, summary }),
         });
         const payloadText = await res.text();
-        if (!res.ok) throw new Error(payloadText || "Summary fehlgeschlagen");
-        const summary = sanitizePlainText(extractPlainTextResponse(payloadText));
-        if (!summary) return;
-        const nextBasics = { ...basicsRef.current, [field]: summary } as Basics;
-        basicsRef.current = nextBasics;
-        setBasics(nextBasics);
-        try {
-          const supabase = createClient();
-          await supabase.from("fast_scan_sessions").update({ basics: nextBasics }).eq("user_id", userId);
-        } catch (err) {
-          console.error("fast/record summary save error", err);
+        if (!res.ok) throw new Error(payloadText || "Feedback fehlgeschlagen");
+        const guidance = sanitizePlainText(extractPlainTextResponse(payloadText));
+        if (guidance) {
+          setMessages((msgs) => [...msgs, { role: "assistant", text: guidance }]);
         }
       } catch (err) {
-        console.error("fast/record summary error", err);
+        console.error("fast/record feedback error", err);
       }
     },
-    [field, userId],
+    [field],
   );
 
   const saveFieldValue = useCallback(
@@ -611,7 +604,7 @@ export default function RecordFieldPage() {
 
       try {
         const supabase = createClient();
-        const nextBasics: Basics = { ...basicsRef.current };
+        const nextBasics: Basics = { ...basicsRef.current, [field]: trimmed } as Basics;
         const existing: HistoryEntry[] = history[field] ?? [];
         const lastEntry = existing[existing.length - 1]?.text ?? "";
         const shouldAppend = addHistory && sanitizePlainText(lastEntry) !== trimmed;
@@ -652,7 +645,6 @@ export default function RecordFieldPage() {
         valueRef.current = trimmed;
         setValue(trimmed);
         if (!silent) setInfo("Antwort gespeichert.");
-        void requestSummary(trimmed);
         return true;
       } catch (err) {
         console.error("fast/record save error", err);
@@ -675,6 +667,7 @@ export default function RecordFieldPage() {
         const fd = new FormData();
         const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
         fd.append("file", blob, `audio-${field}-${Date.now()}.${ext}`);
+        fd.append("field", field);
         const latestSummary = sanitizePlainText(basicsRef.current[field] ?? "");
         if (latestSummary) fd.append("latestSummary", latestSummary);
         const response = await fetch("/api/fast-track-webhook", {
@@ -713,11 +706,17 @@ export default function RecordFieldPage() {
         const transcriptText = sanitizePlainText(parsedTranscript || previousText);
         const guidanceText = sanitizePlainText(parsedGuidance);
 
+        let effectiveSummary = transcriptText;
         if (transcriptText) {
           valueRef.current = transcriptText;
           setValue(transcriptText);
           const saved = await saveFieldValue(transcriptText, { addHistory: true, silent: true, durationMs });
           if (!saved) setError("Speichern fehlgeschlagen.");
+          else effectiveSummary = transcriptText;
+        }
+
+        if (effectiveSummary) {
+          void requestFeedback(effectiveSummary);
         }
 
         if (guidanceText) {
@@ -747,6 +746,7 @@ export default function RecordFieldPage() {
     }
     const ok = await saveFieldValue(trimmed, { addHistory: true, silent: false });
     if (ok) {
+      void requestFeedback(trimmed);
       saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
       const index = FIELD_KEYS.indexOf(field);
       const nextField = FIELD_KEYS[index + 1];
