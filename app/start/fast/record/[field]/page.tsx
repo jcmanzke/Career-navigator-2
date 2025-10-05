@@ -558,7 +558,7 @@ export default function RecordFieldPage() {
   };
 
   const requestSummary = useCallback(
-    async (latest: string, updatedHistory: HistoryRecord) => {
+    async (latest: string) => {
       if (!userId || !field) return;
       try {
         const res = await fetch("/api/fast-track-webhook", {
@@ -568,13 +568,7 @@ export default function RecordFieldPage() {
             [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
             "X-FastTrack-Mode": "summary",
           },
-          body: JSON.stringify({
-            userId,
-            field,
-            latest,
-            history: updatedHistory,
-            fieldHistory: updatedHistory[field] ?? [],
-          }),
+          body: JSON.stringify({ field, latestSummary: latest }),
         });
         const payloadText = await res.text();
         if (!res.ok) throw new Error(payloadText || "Summary fehlgeschlagen");
@@ -658,7 +652,7 @@ export default function RecordFieldPage() {
         valueRef.current = trimmed;
         setValue(trimmed);
         if (!silent) setInfo("Antwort gespeichert.");
-        void requestSummary(trimmed, mergedHistory);
+        void requestSummary(trimmed);
         return true;
       } catch (err) {
         console.error("fast/record save error", err);
@@ -679,19 +673,10 @@ export default function RecordFieldPage() {
         setError(null);
         setInfo(null);
         const fd = new FormData();
-        const currentValue = valueRef.current;
         const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
         fd.append("file", blob, `audio-${field}-${Date.now()}.${ext}`);
-        fd.append("userId", userId);
-        fd.append("field", field);
-        const sanitizedCurrent = sanitizePlainText(currentValue);
-        fd.append("currentText", sanitizedCurrent);
-        fd.append("existingText", sanitizedCurrent);
-        fd.append("fieldHistory", JSON.stringify(history[field] ?? []));
-        fd.append("history", JSON.stringify(history));
-        if (typeof durationMs === "number") {
-          fd.append("durationMs", String(durationMs));
-        }
+        const latestSummary = sanitizePlainText(basicsRef.current[field] ?? "");
+        if (latestSummary) fd.append("latestSummary", latestSummary);
         const response = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
@@ -705,6 +690,7 @@ export default function RecordFieldPage() {
           throw new Error(payloadText || "Upload fehlgeschlagen");
         }
         const rawParsed = extractPlainTextResponse(payloadText);
+        const previousText = valueRef.current;
         let parsedTranscript = "";
         let parsedGuidance = rawParsed;
         try {
@@ -724,7 +710,7 @@ export default function RecordFieldPage() {
           // ignore JSON errors
         }
 
-        const transcriptText = sanitizePlainText(parsedTranscript || sanitizedCurrent);
+        const transcriptText = sanitizePlainText(parsedTranscript || previousText);
         const guidanceText = sanitizePlainText(parsedGuidance);
 
         if (transcriptText) {
