@@ -340,7 +340,8 @@ export default function RecordFieldPage() {
         if (!active) return;
         setBasics(basicsData);
         setHistory(historyData);
-        const initialValue = basicsData[field] ?? "";
+        const latestHistory = historyData[field]?.[historyData[field].length - 1]?.text ?? "";
+        const initialValue = latestHistory;
         valueRef.current = initialValue;
         setValue(initialValue);
 
@@ -616,7 +617,7 @@ export default function RecordFieldPage() {
 
       try {
         const supabase = createClient();
-        const nextBasics: Basics = { ...basics };
+        const nextBasics: Basics = { ...basicsRef.current };
         const existing: HistoryEntry[] = history[field] ?? [];
         const lastEntry = existing[existing.length - 1]?.text ?? "";
         const shouldAppend = addHistory && sanitizePlainText(lastEntry) !== trimmed;
@@ -649,6 +650,7 @@ export default function RecordFieldPage() {
           current: sanitizePlainText(data?.basics?.current ?? ""),
           goals: sanitizePlainText(data?.basics?.goals ?? ""),
         };
+        basicsRef.current = mergedBasics;
         const mergedHistory = normalizeHistory(data?.history);
 
         setBasics(mergedBasics);
@@ -702,26 +704,39 @@ export default function RecordFieldPage() {
         if (!response.ok) {
           throw new Error(payloadText || "Upload fehlgeschlagen");
         }
-        const transcript = sanitizePlainText(extractPlainTextResponse(payloadText));
-        if (transcript) {
-          const cleaned = transcript.trim();
-          const previous = valueRef.current.trim();
-          const merged = !previous
-            ? cleaned
-            : cleaned.startsWith(previous)
-            ? cleaned
-            : `${previous} ${cleaned}`.replace(/\s+/g, " ").trim();
-          valueRef.current = merged;
-          setValue(merged);
-          const saved = await saveFieldValue(merged, { addHistory: true, silent: true, durationMs });
-          if (saved) {
-            setMessages((msgs) => [...msgs, { role: "assistant", text: cleaned }]);
-            setInfo("Transkription empfangen.");
-          } else {
-            setError("Speichern fehlgeschlagen.");
+        const rawParsed = extractPlainTextResponse(payloadText);
+        let parsedTranscript = "";
+        let parsedGuidance = rawParsed;
+        try {
+          if (payloadText.trim().startsWith("{") || payloadText.trim().startsWith("[")) {
+            const parsed = JSON.parse(payloadText);
+            const getFromKeys = (keys: string[]): string => {
+              for (const key of keys) {
+                const value = (parsed as any)?.[key];
+                if (typeof value === "string" && value.trim()) return value.trim();
+              }
+              return "";
+            };
+            parsedTranscript = getFromKeys(["transcript", "user", "input", "answer"]) || parsedTranscript;
+            parsedGuidance = getFromKeys(["guidance", "feedback", "assistant", "text", "message", "response", "output"]) || rawParsed;
           }
-        } else {
-          setInfo("Aufnahme gesendet.");
+        } catch {
+          // ignore JSON errors
+        }
+
+        const transcriptText = sanitizePlainText(parsedTranscript || sanitizedCurrent);
+        const guidanceText = sanitizePlainText(parsedGuidance);
+
+        if (transcriptText) {
+          valueRef.current = transcriptText;
+          setValue(transcriptText);
+          const saved = await saveFieldValue(transcriptText, { addHistory: true, silent: true, durationMs });
+          if (!saved) setError("Speichern fehlgeschlagen.");
+        }
+
+        if (guidanceText) {
+          setMessages((msgs) => [...msgs, { role: "assistant", text: guidanceText }]);
+          setInfo("Transkription empfangen.");
         }
       } catch (err) {
         console.error("fast/record upload error", err);
@@ -818,7 +833,7 @@ export default function RecordFieldPage() {
                   type="button"
                   onClick={handleSave}
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-semibold disabled:opacity-60"
-                  disabled={saving || !value.trim()}
+                  disabled={saving || (history[field]?.length ?? 0) === 0}
                 >
                   {saving ? "Speichere…" : "Weiter"}
                 </button>
