@@ -6,7 +6,7 @@ export type Basics = {
   goals: string;
 };
 
-export type HistoryEntry = { timestamp: number; text: string };
+export type HistoryEntry = { timestamp: number; text: string; durationMs?: number };
 
 export type HistoryRecord = Record<FieldKey, HistoryEntry[]>;
 
@@ -44,6 +44,7 @@ export function normalizeHistory(value: any): HistoryRecord {
       .map((entry: any) => ({
         timestamp: typeof entry.timestamp === "number" ? entry.timestamp : Date.now(),
         text: sanitizePlainText(String(entry.text)),
+        durationMs: typeof entry.durationMs === "number" ? entry.durationMs : undefined,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   });

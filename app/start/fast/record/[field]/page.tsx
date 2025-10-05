@@ -11,7 +11,6 @@ import {
   type HistoryRecord,
   emptyHistory,
   fieldLabel,
-  inputFieldLabel,
   normalizeHistory,
   sanitizePlainText,
 } from "../../shared";
@@ -50,6 +49,74 @@ type ConversationMessage = {
   role: "assistant" | "user";
   text: string;
 };
+
+const RESPONSE_KEYS = [
+  "transcript",
+  "text",
+  "value",
+  "message",
+  "result",
+  "response",
+  "output",
+  "content",
+  "data",
+  "summary",
+  "answer",
+];
+
+function extractPlainTextResponse(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const tryNode = (node: unknown, depth = 0): string => {
+    if (!node || depth > 8) return "";
+    if (typeof node === "string") {
+      const s = node.trim();
+      return s.length ? s : "";
+    }
+    if (typeof node === "number") return String(node);
+    if (Array.isArray(node)) {
+      return node
+        .map((item) => tryNode(item, depth + 1))
+        .filter((part) => part.length > 0)
+        .join(" ")
+        .trim();
+    }
+    if (typeof node === "object") {
+      const obj = node as Record<string, unknown>;
+      for (const key of RESPONSE_KEYS) {
+        if (key in obj) {
+          const found = tryNode(obj[key], depth + 1);
+          if (found) return found;
+        }
+      }
+      for (const value of Object.values(obj)) {
+        const found = tryNode(value, depth + 1);
+        if (found) return found;
+      }
+    }
+    return "";
+  };
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const extracted = tryNode(parsed);
+      if (extracted) return extracted;
+    } catch {
+      // fall back
+    }
+  }
+  return trimmed;
+}
+
+function formatDuration(durationMs?: number): string {
+  if (!durationMs || durationMs <= 0) return "—";
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+}
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -204,10 +271,16 @@ export default function RecordFieldPage() {
   const shouldUploadRef = useRef(false);
   const mimeTypeRef = useRef<string>("audio/webm");
   const valueRef = useRef("");
+  const recordingStartRef = useRef<number | null>(null);
+  const basicsRef = useRef<Basics>(basics);
 
   useEffect(() => {
     valueRef.current = value;
   }, [value]);
+
+  useEffect(() => {
+    basicsRef.current = basics;
+  }, [basics]);
 
   useEffect(() => {
     if (!field) {
@@ -275,7 +348,6 @@ export default function RecordFieldPage() {
         const guidanceMessages: ConversationMessage[] = [];
         if (guidance) {
           guidanceMessages.push({ role: "assistant", text: guidance.intro });
-          guidance.hints.forEach((hint) => guidanceMessages.push({ role: "assistant", text: hint }));
         }
         setMessages(guidanceMessages);
       } catch (err) {
@@ -340,6 +412,7 @@ export default function RecordFieldPage() {
       chunksRef.current = [];
       shouldUploadRef.current = false;
       mimeTypeRef.current = options?.mimeType || recorder.mimeType || "audio/webm";
+      recordingStartRef.current = Date.now();
 
       const finalizeUpload = () => {
         if (!shouldUploadRef.current) return;
@@ -349,7 +422,9 @@ export default function RecordFieldPage() {
         chunksRef.current = [];
         const type = chunks[0]?.type || mimeTypeRef.current || "audio/webm";
         const blob = new Blob(chunks, { type });
-        void uploadRecording(blob);
+        const durationMs = recordingStartRef.current ? Date.now() - recordingStartRef.current : undefined;
+        recordingStartRef.current = null;
+        void uploadRecording(blob, durationMs);
       };
 
       recorder.ondataavailable = (event) => {
@@ -376,6 +451,7 @@ export default function RecordFieldPage() {
         } else {
           chunksRef.current = [];
         }
+        recordingStartRef.current = null;
       };
 
       try {
@@ -393,6 +469,7 @@ export default function RecordFieldPage() {
     } catch (err) {
       console.error("record start error", err);
       setError("Audioaufnahme nicht möglich. Bitte Mikrofonzugriff erlauben.");
+      recordingStartRef.current = null;
     }
   };
 
@@ -479,10 +556,53 @@ export default function RecordFieldPage() {
     setRecorderOpen(true);
   };
 
+  const requestSummary = useCallback(
+    async (latest: string, updatedHistory: HistoryRecord) => {
+      if (!userId || !field) return;
+      try {
+        const res = await fetch("/api/fast-track-webhook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+            "X-FastTrack-Mode": "summary",
+          },
+          body: JSON.stringify({
+            userId,
+            field,
+            latest,
+            history: updatedHistory,
+            fieldHistory: updatedHistory[field] ?? [],
+          }),
+        });
+        const payloadText = await res.text();
+        if (!res.ok) throw new Error(payloadText || "Summary fehlgeschlagen");
+        const summary = sanitizePlainText(extractPlainTextResponse(payloadText));
+        if (!summary) return;
+        const nextBasics = { ...basicsRef.current, [field]: summary } as Basics;
+        basicsRef.current = nextBasics;
+        setBasics(nextBasics);
+        try {
+          const supabase = createClient();
+          await supabase.from("fast_scan_sessions").update({ basics: nextBasics }).eq("user_id", userId);
+        } catch (err) {
+          console.error("fast/record summary save error", err);
+        }
+      } catch (err) {
+        console.error("fast/record summary error", err);
+      }
+    },
+    [field, userId],
+  );
+
   const saveFieldValue = useCallback(
     async (
       rawText: string,
-      { addHistory = true, silent = false }: { addHistory?: boolean; silent?: boolean } = {},
+      {
+        addHistory = true,
+        silent = false,
+        durationMs,
+      }: { addHistory?: boolean; silent?: boolean; durationMs?: number } = {},
     ): Promise<boolean> => {
       if (!field || !userId) return false;
       const trimmed = sanitizePlainText(rawText).trim();
@@ -496,11 +616,13 @@ export default function RecordFieldPage() {
 
       try {
         const supabase = createClient();
-        const nextBasics: Basics = { ...basics, [field]: trimmed };
+        const nextBasics: Basics = { ...basics };
         const existing: HistoryEntry[] = history[field] ?? [];
         const lastEntry = existing[existing.length - 1]?.text ?? "";
         const shouldAppend = addHistory && sanitizePlainText(lastEntry) !== trimmed;
-        const nextEntries = shouldAppend ? [...existing, { timestamp: Date.now(), text: trimmed }] : existing;
+        const nextEntries = shouldAppend
+          ? [...existing, { timestamp: Date.now(), text: trimmed, durationMs }]
+          : existing;
         const limitedEntries = shouldAppend ? nextEntries.slice(-HISTORY_LIMIT) : existing;
         const nextHistory: HistoryRecord = shouldAppend
           ? { ...history, [field]: limitedEntries }
@@ -533,10 +655,8 @@ export default function RecordFieldPage() {
         setHistory(mergedHistory);
         valueRef.current = trimmed;
         setValue(trimmed);
-        if (!silent && addHistory) {
-          setMessages((msgs) => [...msgs, { role: "assistant", text: trimmed }]);
-        }
         if (!silent) setInfo("Antwort gespeichert.");
+        void requestSummary(trimmed, mergedHistory);
         return true;
       } catch (err) {
         console.error("fast/record save error", err);
@@ -546,11 +666,11 @@ export default function RecordFieldPage() {
         if (!silent) setSaving(false);
       }
     },
-    [basics, field, history, userId, setMessages],
+    [basics, field, history, requestSummary, userId],
   );
 
   const uploadRecording = useCallback(
-    async (blob: Blob) => {
+    async (blob: Blob, durationMs?: number) => {
       if (!userId || !field) return;
       try {
         setTranscribing(true);
@@ -567,10 +687,14 @@ export default function RecordFieldPage() {
         fd.append("existingText", sanitizedCurrent);
         fd.append("fieldHistory", JSON.stringify(history[field] ?? []));
         fd.append("history", JSON.stringify(history));
+        if (typeof durationMs === "number") {
+          fd.append("durationMs", String(durationMs));
+        }
         const response = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
             [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+            "X-FastTrack-Mode": "guidance",
           },
           body: fd,
         });
@@ -578,66 +702,7 @@ export default function RecordFieldPage() {
         if (!response.ok) {
           throw new Error(payloadText || "Upload fehlgeschlagen");
         }
-        const extractTranscript = (raw: string): string => {
-          const trimmed = raw.trim();
-          if (!trimmed) return "";
-          if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-            try {
-              const parsed = JSON.parse(trimmed);
-              const candidateKeys = [
-                "transcript",
-                "text",
-                "value",
-                "message",
-                "result",
-                "response",
-                "output",
-                "content",
-                "data",
-                "summary",
-                "answer",
-              ];
-              const extractFromNode = (node: unknown, depth = 0): string => {
-                if (!node || depth > 6) return "";
-                if (typeof node === "string") {
-                  const s = node.trim();
-                  return s.length ? s : "";
-                }
-                if (typeof node === "number") {
-                  return String(node);
-                }
-                if (Array.isArray(node)) {
-                  const collected = node
-                    .map((item) => extractFromNode(item, depth + 1))
-                    .filter((part) => part.length > 0);
-                  return collected.join(" ").trim();
-                }
-                if (typeof node === "object") {
-                  const obj = node as Record<string, unknown>;
-                  for (const key of candidateKeys) {
-                    if (key in obj) {
-                      const found = extractFromNode(obj[key], depth + 1);
-                      if (found) return found;
-                    }
-                  }
-                  // fall back to other values
-                  for (const value of Object.values(obj)) {
-                    const found = extractFromNode(value, depth + 1);
-                    if (found) return found;
-                  }
-                }
-                return "";
-              };
-              const pick = extractFromNode(parsed);
-              if (pick) return pick;
-            } catch {
-              // fall back below
-            }
-          }
-          return trimmed;
-        };
-
-        const transcript = sanitizePlainText(extractTranscript(payloadText));
+        const transcript = sanitizePlainText(extractPlainTextResponse(payloadText));
         if (transcript) {
           const cleaned = transcript.trim();
           const previous = valueRef.current.trim();
@@ -648,7 +713,7 @@ export default function RecordFieldPage() {
             : `${previous} ${cleaned}`.replace(/\s+/g, " ").trim();
           valueRef.current = merged;
           setValue(merged);
-          const saved = await saveFieldValue(merged, { addHistory: true, silent: true });
+          const saved = await saveFieldValue(merged, { addHistory: true, silent: true, durationMs });
           if (saved) {
             setMessages((msgs) => [...msgs, { role: "assistant", text: cleaned }]);
             setInfo("Transkription empfangen.");
@@ -715,18 +780,8 @@ export default function RecordFieldPage() {
           <div>
             <h1 className="text-xl font-semibold">Aufnahme: {fieldLabel(field)}</h1>
             <p className="text-neutrals-600 mt-1">
-              Sprich deine Antwort ein oder ergänze sie per Tastatur. Du kannst mehrere Aufnahmen machen; jede Transkription wird angehängt.
+              Sprich deine Antwort ein – der Coach führt dich Schritt für Schritt durch die Fragen.
             </p>
-            {messages.length ? (
-              <div className="mt-4 space-y-2 rounded-2xl border border-neutrals-200 bg-white p-4">
-                <h2 className="text-small font-semibold text-neutrals-700">Hinweise</h2>
-                <ul className="space-y-1 text-small text-neutrals-700">
-                  {messages.map((msg, idx) => (
-                    <li key={idx} className="whitespace-pre-wrap">{msg.text}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
           </div>
 
           {loading ? (
@@ -734,17 +789,17 @@ export default function RecordFieldPage() {
           ) : (
             <>
               <div className="space-y-2">
-                <label className="text-small text-neutrals-500" htmlFor="record-textarea">
-                  {inputFieldLabel(field)}
+                <label className="text-small text-neutrals-500" htmlFor="guidance-box">
+                  Agentenhinweis
                 </label>
-                <textarea
-                  id="record-textarea"
-                  className="w-full rounded-2xl border border-accent-700 bg-white p-3 min-h-[150px]"
-                  placeholder={`Beschreibe ${inputFieldLabel(field).toLowerCase()}…`}
-                  value={value}
-                  onChange={(event) => setValue(event.target.value)}
-                  disabled={transcribing}
-                />
+                <div
+                  id="guidance-box"
+                  className="w-full rounded-2xl border border-accent-700 bg-white p-3 min-h-[150px] text-small text-neutrals-800 whitespace-pre-wrap"
+                >
+                  {messages.length
+                    ? messages[messages.length - 1].text
+                    : "Tippe auf \"Neue Sprachaufnahme\" und erzähle kurz davon."}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -765,7 +820,7 @@ export default function RecordFieldPage() {
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-semibold disabled:opacity-60"
                   disabled={saving || !value.trim()}
                 >
-                  {saving ? "Speichere…" : "Übernehmen"}
+                  {saving ? "Speichere…" : "Weiter"}
                 </button>
                 {(recording || transcribing) && (
                   <span className="text-small text-neutrals-500">
@@ -782,16 +837,20 @@ export default function RecordFieldPage() {
 
         {history[field]?.length ? (
           <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/40 backdrop-blur-md shadow-elevation1 p-6">
-            <h2 className="text-lg font-semibold mb-3">Verlauf</h2>
+            <h2 className="text-lg font-semibold mb-3">Aufnahmen</h2>
             <ul className="space-y-3">
-              {[...history[field]].reverse().map((entry) => (
-                <li key={entry.timestamp} className="rounded-2xl border border-neutrals-200 bg-white p-3">
-                  <p className="text-small text-neutrals-500">
-                    {new Date(entry.timestamp).toLocaleString()}
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap">{entry.text}</p>
-                </li>
-              ))}
+              {[...history[field]].reverse().map((entry) => {
+                const date = new Date(entry.timestamp);
+                const duration = formatDuration(entry.durationMs);
+                return (
+                  <li key={entry.timestamp} className="rounded-2xl border border-neutrals-200 bg-white p-3">
+                    <div className="flex items-center justify-between text-small text-neutrals-600">
+                      <span>{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="text-neutrals-500">Dauer: {duration}</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ) : null}
