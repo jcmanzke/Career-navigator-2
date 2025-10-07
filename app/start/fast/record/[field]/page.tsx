@@ -654,7 +654,7 @@ export default function RecordFieldPage() {
         if (!silent) setSaving(false);
       }
     },
-    [basics, field, history, requestSummary, userId],
+    [basics, field, history, userId],
   );
 
   const uploadRecording = useCallback(
