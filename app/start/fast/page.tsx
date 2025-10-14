@@ -229,7 +229,7 @@ export default function FastTrack() {
                           )}
                           aria-hidden="true"
                         >
-                          🎙️
+                          {hasRecording ? "✅" : "🎙️"}
                         </span>
                         <span className="text-neutrals-900">Aufnehmen</span>
                       </div>

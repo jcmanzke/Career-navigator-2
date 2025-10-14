@@ -315,6 +315,21 @@ export default function RecordFieldPage() {
     basicsRef.current = basics;
   }, [basics]);
 
+  const exitToStepOne = useCallback(
+    (delay = 0) => {
+      setRecorderOpen(false);
+      const navigate = () => {
+        router.push("/start/fast");
+      };
+      if (delay > 0) {
+        setTimeout(navigate, delay);
+      } else {
+        navigate();
+      }
+    },
+    [router],
+  );
+
   useEffect(() => {
     if (!field) {
       router.replace("/start/fast");
@@ -514,6 +529,9 @@ export default function RecordFieldPage() {
       setRecorderOpen(false);
       setRecording(false);
       setPaused(false);
+      if (!upload) {
+        exitToStepOne();
+      }
       return;
     }
     try {
@@ -531,6 +549,9 @@ export default function RecordFieldPage() {
       setRecorderOpen(false);
       setRecording(false);
       setPaused(false);
+      if (!upload) {
+        exitToStepOne();
+      }
     }
   };
 
@@ -571,7 +592,7 @@ export default function RecordFieldPage() {
     if (recording || paused) {
       stopRecording({ upload: true });
     } else {
-      setRecorderOpen(false);
+      exitToStepOne();
     }
   };
 
@@ -579,7 +600,7 @@ export default function RecordFieldPage() {
     if (recording || paused) {
       stopRecording({ upload: false });
     } else {
-      setRecorderOpen(false);
+      exitToStepOne();
     }
   };
 
@@ -767,10 +788,14 @@ export default function RecordFieldPage() {
 
         if (guidanceText) {
           setMessages((msgs) => [...msgs, { role: "assistant", text: guidanceText }]);
-          setInfo("Coach-Hinweis erhalten.");
-        } else if (summarySaved) {
+        }
+
+        if (summarySaved) {
           setInfo("Zusammenfassung gespeichert.");
-        } else if (fallbackPlain && !guidanceText) {
+          exitToStepOne(400);
+        } else if (guidanceText) {
+          setInfo("Coach-Hinweis erhalten.");
+        } else if (fallbackPlain) {
           setInfo("Transkription empfangen.");
         }
       } catch (err) {
@@ -780,7 +805,7 @@ export default function RecordFieldPage() {
         setTranscribing(false);
       }
     },
-    [field, history, saveFieldValue, setMessages, userId],
+    [exitToStepOne, field, history, saveFieldValue, setMessages, userId],
   );
 
   const handleSave = async () => {
