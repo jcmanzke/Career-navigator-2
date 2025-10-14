@@ -263,6 +263,8 @@ export default function RecordFieldPage() {
   const [saving, setSaving] = useState(false);
   const [recorderOpen, setRecorderOpen] = useState(true);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [pendingSummary, setPendingSummary] = useState<string | null>(null);
+  const [sendingSummary, setSendingSummary] = useState(false);
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -467,6 +469,7 @@ export default function RecordFieldPage() {
       }, 5000);
       setPaused(false);
       setRecording(true);
+      setPendingSummary(null);
     } catch (err) {
       console.error("record start error", err);
       setError("Audioaufnahme nicht möglich. Bitte Mikrofonzugriff erlauben.");
@@ -534,9 +537,58 @@ export default function RecordFieldPage() {
     stopRecording({ upload: true });
   };
 
+  const requestFeedback = useCallback(
+    async (summary: string) => {
+      if (!summary || !field) return false;
+      try {
+        const res = await fetch("/api/fast-track-webhook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+            "X-FastTrack-Mode": "feedback",
+          },
+          body: JSON.stringify({ field, summary }),
+        });
+        const payloadText = await res.text();
+        if (!res.ok) throw new Error(payloadText || "Feedback fehlgeschlagen");
+        const guidance = sanitizePlainText(extractPlainTextResponse(payloadText));
+        if (guidance) {
+          setMessages((msgs) => [...msgs, { role: "assistant", text: guidance }]);
+        }
+        return true;
+      } catch (err) {
+        console.error("fast/record feedback error", err);
+        return false;
+      }
+    },
+    [field],
+  );
+
+  const handleSendSummary = useCallback(async () => {
+    const summary = pendingSummary?.trim();
+    if (!summary || sendingSummary) return;
+    setSendingSummary(true);
+    setError(null);
+    setInfo(null);
+    const ok = await requestFeedback(summary);
+    if (ok) {
+      setPendingSummary(null);
+      setInfo("Zusammenfassung an den Coach gesendet.");
+    } else {
+      setError("Zusammenfassung konnte nicht gesendet werden.");
+    }
+    setSendingSummary(false);
+  }, [pendingSummary, requestFeedback, sendingSummary]);
+
   const handleSend = () => {
     if (recording || paused) {
       stopRecording({ upload: true });
+      return;
+    }
+    if (pendingSummary) {
+      void handleSendSummary();
+      setRecorderOpen(false);
     } else {
       setRecorderOpen(false);
     }
@@ -556,32 +608,6 @@ export default function RecordFieldPage() {
     setPaused(false);
     setRecorderOpen(true);
   };
-
-  const requestFeedback = useCallback(
-    async (summary: string) => {
-      if (!summary || !field) return;
-      try {
-        const res = await fetch("/api/fast-track-webhook", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
-            "X-FastTrack-Mode": "feedback",
-          },
-          body: JSON.stringify({ field, summary }),
-        });
-        const payloadText = await res.text();
-        if (!res.ok) throw new Error(payloadText || "Feedback fehlgeschlagen");
-        const guidance = sanitizePlainText(extractPlainTextResponse(payloadText));
-        if (guidance) {
-          setMessages((msgs) => [...msgs, { role: "assistant", text: guidance }]);
-        }
-      } catch (err) {
-        console.error("fast/record feedback error", err);
-      }
-    },
-    [field],
-  );
 
   const saveFieldValue = useCallback(
     async (
@@ -716,12 +742,13 @@ export default function RecordFieldPage() {
         }
 
         if (effectiveSummary) {
-          void requestFeedback(effectiveSummary);
+          setPendingSummary(effectiveSummary);
+          setInfo("Zusammenfassung erstellt. Prüfe sie und sende sie weiter.");
         }
 
         if (guidanceText) {
           setMessages((msgs) => [...msgs, { role: "assistant", text: guidanceText }]);
-          setInfo("Transkription empfangen.");
+          if (!effectiveSummary) setInfo("Transkription empfangen.");
         }
       } catch (err) {
         console.error("fast/record upload error", err);
@@ -802,6 +829,40 @@ export default function RecordFieldPage() {
                     : "Tippe auf \"Neue Sprachaufnahme\" und erzähle kurz davon."}
                 </div>
               </div>
+
+              {pendingSummary && (
+                <div className="space-y-2">
+                  <label className="text-small text-neutrals-500" htmlFor="summary-box">
+                    Deine Zusammenfassung
+                  </label>
+                  <div
+                    id="summary-box"
+                    className="w-full rounded-2xl border border-neutrals-200 bg-white p-3 text-small text-neutrals-800 whitespace-pre-wrap"
+                  >
+                    {pendingSummary}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleSendSummary();
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#1D252A] px-4 py-2 font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
+                      disabled={sendingSummary || transcribing}
+                    >
+                      {sendingSummary ? "Sende…" : "An Workbook senden"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingSummary(null)}
+                      className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-semibold text-neutrals-700 disabled:opacity-60"
+                      disabled={sendingSummary}
+                    >
+                      Verwerfen
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
