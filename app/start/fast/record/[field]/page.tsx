@@ -64,6 +64,39 @@ const RESPONSE_KEYS = [
   "answer",
 ];
 
+function extractFromNode(node: unknown, keys: string[]): string {
+  const visit = (value: unknown, allowReturn: boolean): string => {
+    if (typeof value === "string" || typeof value === "number") {
+      if (!allowReturn) return "";
+      const text = String(value).trim();
+      return text.length ? text : "";
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = visit(item, allowReturn);
+        if (found) return found;
+      }
+      return "";
+    }
+    if (value && typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      for (const key of keys) {
+        if (key in obj) {
+          const found = visit(obj[key], true);
+          if (found) return found;
+        }
+      }
+      for (const child of Object.values(obj)) {
+        const found = visit(child, allowReturn);
+        if (found) return found;
+      }
+    }
+    return "";
+  };
+
+  return visit(node, false);
+}
+
 function extractPlainTextResponse(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
@@ -682,45 +715,62 @@ export default function RecordFieldPage() {
         if (!response.ok) {
           throw new Error(payloadText || "Upload fehlgeschlagen");
         }
-        const rawParsed = extractPlainTextResponse(payloadText);
         const previousText = valueRef.current;
+        const fallbackPlain = sanitizePlainText(extractPlainTextResponse(payloadText));
+        const trimmedPayload = payloadText.trim();
+        let parsedSummary = "";
         let parsedTranscript = "";
-        let parsedGuidance = rawParsed;
-        try {
-          if (payloadText.trim().startsWith("{") || payloadText.trim().startsWith("[")) {
-            const parsed = JSON.parse(payloadText);
-            const getFromKeys = (keys: string[]): string => {
-              for (const key of keys) {
-                const value = (parsed as any)?.[key];
-                if (typeof value === "string" && value.trim()) return value.trim();
-              }
-              return "";
-            };
-            parsedTranscript = getFromKeys(["transcript", "user", "input", "answer"]) || parsedTranscript;
-            parsedGuidance = getFromKeys(["guidance", "feedback", "assistant", "text", "message", "response", "output"]) || rawParsed;
+        let parsedGuidance = "";
+        if (trimmedPayload.startsWith("{") || trimmedPayload.startsWith("[")) {
+          try {
+            const parsed = JSON.parse(trimmedPayload);
+            parsedSummary = extractFromNode(parsed, ["summary", "result", "value"]);
+            parsedTranscript = extractFromNode(parsed, ["transcript", "user", "input", "answer"]);
+            parsedGuidance = extractFromNode(parsed, [
+              "guidance",
+              "feedback",
+              "assistant",
+              "message",
+              "response",
+              "output",
+              "content",
+            ]);
+          } catch {
+            // ignore JSON errors
           }
-        } catch {
-          // ignore JSON errors
         }
 
-        const transcriptText = sanitizePlainText(parsedTranscript || previousText);
         const guidanceText = sanitizePlainText(parsedGuidance);
+        const transcriptText = sanitizePlainText(parsedTranscript || previousText);
+        const shouldUseFallbackForSummary = Boolean(
+          fallbackPlain && (!guidanceText || guidanceText !== fallbackPlain),
+        );
+        const summaryText = sanitizePlainText(
+          parsedSummary || parsedTranscript || (shouldUseFallbackForSummary ? fallbackPlain : "") || previousText,
+        );
 
-        let effectiveSummary = transcriptText;
-        if (transcriptText) {
+        let summarySaved = false;
+        if (summaryText) {
+          valueRef.current = summaryText;
+          setValue(summaryText);
+          const saved = await saveFieldValue(summaryText, { addHistory: true, silent: true, durationMs });
+          if (!saved) {
+            setError("Speichern fehlgeschlagen.");
+          } else {
+            summarySaved = true;
+            void requestFeedback(summaryText);
+          }
+        } else if (transcriptText) {
           valueRef.current = transcriptText;
           setValue(transcriptText);
-          const saved = await saveFieldValue(transcriptText, { addHistory: true, silent: true, durationMs });
-          if (!saved) setError("Speichern fehlgeschlagen.");
-          else effectiveSummary = transcriptText;
-        }
-
-        if (effectiveSummary) {
-          void requestFeedback(effectiveSummary);
         }
 
         if (guidanceText) {
           setMessages((msgs) => [...msgs, { role: "assistant", text: guidanceText }]);
+          setInfo("Coach-Hinweis erhalten.");
+        } else if (summarySaved) {
+          setInfo("Zusammenfassung gespeichert.");
+        } else if (fallbackPlain && !guidanceText) {
           setInfo("Transkription empfangen.");
         }
       } catch (err) {
