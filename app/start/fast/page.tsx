@@ -58,8 +58,6 @@ export default function FastTrack() {
   const [basics, setBasics] = useState<Basics>({ background: "", current: "", goals: "" });
   const [history, setHistory] = useState<HistoryRecord>(emptyHistory);
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
 
   useEffect(() => {
     const id = `step-${Math.max(1, step)}`;
@@ -162,6 +160,63 @@ export default function FastTrack() {
     }),
     [],
   );
+
+  const summaryText = useMemo(() => {
+    if (!results) return "";
+    if (typeof results === "string") return results.trim();
+    if (typeof results === "object") {
+      const candidates = ["summary", "text", "value", "message", "content", "result"];
+      for (const key of candidates) {
+        const value = (results as Record<string, unknown>)[key];
+        if (typeof value === "string" && value.trim()) {
+          return value.trim();
+        }
+      }
+    }
+    return "";
+  }, [results]);
+
+  const profileData = useMemo(() => {
+    if (!results || typeof results !== "object") {
+      return { strengths: [] as string[], focusAreas: [] as string[] };
+    }
+    const profile = (results as any).profile;
+    const strengths = Array.isArray(profile?.strengths)
+      ? profile.strengths.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    const focusAreas = Array.isArray(profile?.focusAreas)
+      ? profile.focusAreas.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+    return { strengths, focusAreas };
+  }, [results]);
+
+  const suggestions = useMemo(() => {
+    if (!results || typeof results !== "object") return [] as { title?: string; value?: string }[];
+    const raw = (results as any).suggestions;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((item: unknown): item is { title?: string; value?: string } => {
+        if (!item || typeof item !== "object") return false;
+        const entry = item as { title?: unknown; value?: unknown };
+        return (
+          (typeof entry.title === "string" && entry.title.trim().length > 0) ||
+          (typeof entry.value === "string" && entry.value.trim().length > 0)
+        );
+      })
+      .map((item) => ({
+        title: typeof item.title === "string" ? item.title : undefined,
+        value: typeof item.value === "string" ? item.value : undefined,
+      }));
+  }, [results]);
+
+  const rawResults = useMemo(() => {
+    if (!results || typeof results === "string") return "";
+    try {
+      return JSON.stringify(results, null, 2);
+    } catch {
+      return "";
+    }
+  }, [results]);
 
   const generate = async () => {
     setLoading(true);
@@ -282,92 +337,96 @@ export default function FastTrack() {
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-0 md:p-6 flex flex-col">
               <div className="p-6 border-b">
                 <h2 className="text-lg font-semibold">Schritt 3: Ergebnisse generieren</h2>
-                <p className="text-neutrals-600 mt-1">Erzeugt ein Ergebnis basierend auf deinen Eingaben. Ergebnis erscheint darunter im Chat.</p>
+                <p className="text-neutrals-600 mt-1">
+                  Erzeuge deinen individuellen Fast-Track Report basierend auf deinen Eingaben.
+                </p>
                 <div className="mt-4">
                   <button
                     type="button"
-                    disabled={chatLoading}
-                    onClick={async () => {
-                      setChatLoading(true);
-                      setChatMessages([]);
-                      try {
-                        const payload = { summary: basics };
-                        const res = await fetch("/api/fast-track-webhook", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                          body: JSON.stringify({ ...payload, history }),
-                        });
-                        const text = await res.text();
-                        setChatMessages([{ role: "assistant", content: text }]);
-                      } catch (e) {
-                        setChatMessages([{ role: "assistant", content: "Fehler beim Abrufen der Ergebnisse." }]);
-                      } finally {
-                        setChatLoading(false);
-                      }
+                    disabled={loading}
+                    onClick={() => {
+                      void generate();
                     }}
                     className={cls(
                       "group relative inline-flex items-center justify-center w-full md:w-auto h-12 px-4",
                       "rounded-2xl bg-primary-500 text-[#2C2C2C] font-semibold",
-                      chatLoading && "opacity-80 cursor-not-allowed",
+                      loading && "opacity-80 cursor-not-allowed",
                     )}
                   >
-                    {chatLoading ? "Verarbeite…" : "Ergebnisse generieren"}
+                    {loading ? "Verarbeite…" : results ? "Ergebnisse aktualisieren" : "Ergebnisse generieren"}
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 min-h-[50vh] max-h-[70vh] overflow-y-auto p-4 space-y-4">
-                {chatLoading && (
-                  <div className="flex items-center gap-3 text-neutrals-600">
-                    <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
-                    <span>Verarbeite…</span>
+              <div className="flex-1 p-6 space-y-6 overflow-hidden">
+                <div className="rounded-2xl border bg-neutrals-0 p-4 min-h-[180px]">
+                  {loading ? (
+                    <div className="flex items-center gap-3 text-neutrals-600">
+                      <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Verarbeite…</span>
+                    </div>
+                  ) : summaryText ? (
+                    <ReactMarkdown className="prose prose-sm max-w-none">{summaryText}</ReactMarkdown>
+                  ) : (
+                    <p className="text-neutrals-600">Hier erscheint dein Ergebnis, sobald es bereit ist.</p>
+                  )}
+                </div>
+
+                {(profileData.strengths.length > 0 || profileData.focusAreas.length > 0) && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {profileData.strengths.length > 0 && (
+                      <div className="rounded-2xl border bg-neutrals-0 p-4">
+                        <div className="text-small text-neutrals-500 mb-2">Stärken</div>
+                        <ul className="space-y-2 list-disc list-inside text-neutrals-800">
+                          {profileData.strengths.map((item, index) => (
+                            <li key={`strength-${index}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {profileData.focusAreas.length > 0 && (
+                      <div className="rounded-2xl border bg-neutrals-0 p-4">
+                        <div className="text-small text-neutrals-500 mb-2">Fokusthemen</div>
+                        <ul className="space-y-2 list-disc list-inside text-neutrals-800">
+                          {profileData.focusAreas.map((item, index) => (
+                            <li key={`focus-${index}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
-                {chatMessages.map((m, i) => (
-                  <div key={i} className={cls("rounded-2xl p-3", m.role === "assistant" ? "bg-neutrals-50" : "bg-primary-50")}> 
-                    <ReactMarkdown className="prose prose-sm max-w-none">{m.content}</ReactMarkdown>
+
+                {suggestions.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-base font-semibold text-neutrals-800">Empfehlungen</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {suggestions.map((item, index) => (
+                        <div key={`suggestion-${index}`} className="rounded-2xl border bg-neutrals-0 p-4 space-y-1">
+                          {item.title && <div className="text-small text-neutrals-500">{item.title}</div>}
+                          {item.value && <div className="font-medium text-neutrals-800">{item.value}</div>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-                {!chatLoading && chatMessages.length === 0 && (
-                  <p className="text-neutrals-600">Klicke auf „Ergebnisse generieren“, um die Ausgabe zu erhalten.</p>
                 )}
+
+                {!loading && !summaryText &&
+                  profileData.strengths.length === 0 &&
+                  profileData.focusAreas.length === 0 &&
+                  suggestions.length === 0 &&
+                  rawResults && (
+                    <div className="rounded-2xl border bg-neutrals-0 p-4">
+                      <pre className="text-xs leading-relaxed whitespace-pre-wrap break-words text-neutrals-700">{rawResults}</pre>
+                    </div>
+                  )}
               </div>
 
-              <div className="sticky bottom-0 bg-white p-3 border-t">
-                <form
-                  className="flex items-center gap-2"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const form = e.target as HTMLFormElement;
-                    const input = form.elements.namedItem("msg") as HTMLInputElement;
-                    const value = input.value.trim();
-                    if (!value) return;
-                    setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
-                    input.value = "";
-                    try {
-                      const res = await fetch("/api/fast-track-webhook", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                        body: JSON.stringify({ summary: basics, followup: value, history }),
-                      });
-                      const text = await res.text();
-                      setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);
-                    } catch (e) {
-                      setChatMessages((msgs) => [...msgs, { role: "assistant", content: "Fehler beim Abrufen der Antwort." }]);
-                    }
-                  }}
-                >
-                  <input
-                    name="msg"
-                    placeholder="Nachricht eingeben…"
-                    className="flex-1 h-12 px-3 rounded-xl border"
-                  />
-                  <button type="submit" className="h-12 px-4 rounded-xl bg-[#1D252A] text-white">Senden</button>
-                </form>
-                <div className="flex justify-between mt-3">
-                  <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">Zurück</button>
-                  <div className="text-small text-neutrals-500 self-center">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
-                </div>
+              <div className="border-t p-6 flex items-center justify-between">
+                <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">
+                  Zurück
+                </button>
+                <div className="text-small text-neutrals-500">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
               </div>
             </section>
           )}
