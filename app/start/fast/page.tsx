@@ -6,11 +6,22 @@ import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
-import { Basics, FieldKey, HistoryRecord, emptyHistory, normalizeHistory, sanitizePlainText } from "./shared";
+import {
+  Basics,
+  FieldKey,
+  HistoryEntry,
+  HistoryRecord,
+  emptyHistory,
+  normalizeHistory,
+  sanitizePlainText,
+} from "./shared";
+import { FastTrackRecorderModal } from "./FastTrackRecorderModal";
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
+
+const HISTORY_LIMIT = 10;
 
 function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
   const steps = [1, 2, 3];
@@ -57,6 +68,8 @@ export default function FastTrack() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [basics, setBasics] = useState<Basics>({ background: "", current: "", goals: "" });
   const [history, setHistory] = useState<HistoryRecord>(emptyHistory);
+  const [recorderField, setRecorderField] = useState<FieldKey | null>(null);
+  const [recorderOpen, setRecorderOpen] = useState(false);
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
@@ -146,6 +159,51 @@ export default function FastTrack() {
     return () => clearTimeout(t);
   }, [basics, history, userId, step, upsertSession]);
 
+  const openRecorder = useCallback((field: FieldKey) => {
+    setRecorderField(field);
+    setRecorderOpen(true);
+  }, []);
+
+  const handleRecorderClose = useCallback(() => {
+    setRecorderOpen(false);
+    setRecorderField(null);
+  }, []);
+
+  const handleRecorderSave = useCallback(
+    async (field: FieldKey, summary: string, durationMs?: number) => {
+      const trimmed = sanitizePlainText(summary).trim();
+      if (!trimmed) return false;
+
+      const nextBasics: Basics = { ...basics, [field]: trimmed };
+
+      const existingEntries = history[field] ?? [];
+      const lastEntry = existingEntries[existingEntries.length - 1]?.text ?? "";
+      const shouldAppend = sanitizePlainText(lastEntry) !== trimmed;
+
+      let combinedEntries: HistoryEntry[];
+      if (shouldAppend) {
+        const entry: HistoryEntry = { timestamp: Date.now(), text: trimmed };
+        if (typeof durationMs === "number" && Number.isFinite(durationMs)) {
+          entry.durationMs = durationMs;
+        }
+        combinedEntries = [...existingEntries, entry];
+      } else {
+        combinedEntries = [...existingEntries];
+      }
+
+      const limitedEntries = combinedEntries.slice(-HISTORY_LIMIT);
+      const nextHistory: HistoryRecord = { ...history, [field]: limitedEntries };
+
+      setBasics(nextBasics);
+      setHistory(nextHistory);
+      await upsertSession({ basics: nextBasics, history: nextHistory });
+      saveProgress({ track: "fast", stepId: "step-1", updatedAt: Date.now() });
+
+      return true;
+    },
+    [basics, history, upsertSession],
+  );
+
   // Fallback results used if webhook fails
   const dummyData = useMemo(
     () => ({
@@ -213,7 +271,7 @@ export default function FastTrack() {
                     <button
                       key={item.key}
                       type="button"
-                      onClick={() => router.push(`/start/fast/record/${item.key}`)}
+                      onClick={() => openRecorder(item.key)}
                       className={cls(
                         "group flex flex-col justify-between rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 text-left shadow-sm transition-transform",
                         "hover:shadow-elevation3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
@@ -374,6 +432,13 @@ export default function FastTrack() {
         </div>
       )}
 
+      <FastTrackRecorderModal
+        field={recorderField}
+        open={recorderOpen && Boolean(recorderField)}
+        onClose={handleRecorderClose}
+        onSave={handleRecorderSave}
+        initialValue={recorderField ? basics[recorderField] ?? "" : ""}
+      />
     </main>
   );
 }
