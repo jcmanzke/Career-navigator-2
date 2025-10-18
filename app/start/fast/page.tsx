@@ -64,6 +64,8 @@ export default function FastTrack() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
   const [agentResponse, setAgentResponse] = useState<string>("");
+  const step3ChatHeaderName = "X-Fast-Track-Origin";
+  const step3ChatHeaderValue = "fast-track-step-3-chat";
 
   useEffect(() => {
     const id = `step-${Math.max(1, step)}`;
@@ -175,7 +177,7 @@ export default function FastTrack() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
+          [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
           [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
         },
         body: JSON.stringify({ userId, sessionId, basics, history }),
@@ -305,7 +307,7 @@ export default function FastTrack() {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
-                            [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
+                            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
                             [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
                           },
                           body: JSON.stringify({ ...payload, history }),
@@ -375,7 +377,7 @@ export default function FastTrack() {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
-                            [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
+                            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
                             [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
                           },
                           body: JSON.stringify({ summary: basics, followup: value, history }),
