@@ -12,6 +12,9 @@ function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
 
+const STEP3_CHAT_HEADER_NAME = "X-Fast-Track-Origin";
+const STEP3_CHAT_HEADER_VALUE = "fast-track-step-3-chat";
+
 function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
   const steps = [1, 2, 3];
   const pct = Math.round(((current - 1) / 3) * 100);
@@ -60,6 +63,7 @@ export default function FastTrack() {
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
+  const [agentResponse, setAgentResponse] = useState<string>("");
 
   useEffect(() => {
     const id = `step-${Math.max(1, step)}`;
@@ -169,7 +173,11 @@ export default function FastTrack() {
     try {
       const res = await fetch("/api/fast-track-webhook", {
         method: "POST",
-        headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+        headers: {
+          "Content-Type": "application/json",
+          [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+          [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
+        },
         body: JSON.stringify({ userId, sessionId, basics, history }),
       });
       const text = await res.text();
@@ -290,17 +298,25 @@ export default function FastTrack() {
                     onClick={async () => {
                       setChatLoading(true);
                       setChatMessages([]);
+                      setAgentResponse("");
                       try {
                         const payload = { summary: basics };
                         const res = await fetch("/api/fast-track-webhook", {
                           method: "POST",
-                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                          headers: {
+                            "Content-Type": "application/json",
+                            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+                            [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
+                          },
                           body: JSON.stringify({ ...payload, history }),
                         });
                         const text = await res.text();
                         setChatMessages([{ role: "assistant", content: text }]);
+                        setAgentResponse(text);
                       } catch (e) {
-                        setChatMessages([{ role: "assistant", content: "Fehler beim Abrufen der Ergebnisse." }]);
+                        const fallback = "Fehler beim Abrufen der Ergebnisse.";
+                        setAgentResponse(fallback);
+                        setChatMessages([{ role: "assistant", content: fallback }]);
                       } finally {
                         setChatLoading(false);
                       }
@@ -317,6 +333,18 @@ export default function FastTrack() {
               </div>
 
               <div className="flex-1 min-h-[50vh] max-h-[70vh] overflow-y-auto p-4 space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="agent-response" className="block text-sm font-medium text-neutrals-700">
+                    Antwort der KI
+                  </label>
+                  <textarea
+                    id="agent-response"
+                    value={agentResponse}
+                    readOnly
+                    placeholder="Die Antworten der KI erscheinen hier."
+                    className="w-full min-h-[96px] rounded-2xl border border-neutrals-200 bg-neutrals-0 px-3 py-2 text-sm text-neutrals-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  />
+                </div>
                 {chatLoading && (
                   <div className="flex items-center gap-3 text-neutrals-600">
                     <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
@@ -345,13 +373,20 @@ export default function FastTrack() {
                       try {
                         const res = await fetch("/api/fast-track-webhook", {
                           method: "POST",
-                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                          headers: {
+                            "Content-Type": "application/json",
+                            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+                            [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
+                          },
                           body: JSON.stringify({ summary: basics, followup: value, history }),
                         });
                         const text = await res.text();
                         setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);
+                        setAgentResponse(text);
                       } catch (e) {
-                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: "Fehler beim Abrufen der Antwort." }]);
+                        const errorResponse = "Fehler beim Abrufen der Antwort.";
+                        setAgentResponse(errorResponse);
+                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: errorResponse }]);
                       }
                     }}
                   >
