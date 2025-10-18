@@ -328,45 +328,44 @@ export default function FastTrack() {
                     <ReactMarkdown className="prose prose-sm max-w-none">{m.content}</ReactMarkdown>
                   </div>
                 ))}
-                {!chatLoading && chatMessages.length === 0 && (
-                  <p className="text-neutrals-600">Klicke auf „Ergebnisse generieren“, um die Ausgabe zu erhalten.</p>
-                )}
               </div>
 
-              <div className="sticky bottom-0 bg-white p-3 border-t">
-                <form
-                  className="flex items-center gap-2"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const form = e.target as HTMLFormElement;
-                    const input = form.elements.namedItem("msg") as HTMLInputElement;
-                    const value = input.value.trim();
-                    if (!value) return;
-                    setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
-                    input.value = "";
-                    try {
-                      const res = await fetch("/api/fast-track-webhook", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
-                        body: JSON.stringify({ summary: basics, followup: value, history }),
-                      });
-                      const text = await res.text();
-                      setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);
-                    } catch (e) {
-                      setChatMessages((msgs) => [...msgs, { role: "assistant", content: "Fehler beim Abrufen der Antwort." }]);
-                    }
-                  }}
-                >
-                  <input
-                    name="msg"
-                    placeholder="Nachricht eingeben…"
-                    className="flex-1 h-12 px-3 rounded-xl border"
-                  />
-                  <button type="submit" className="h-12 px-4 rounded-xl bg-[#1D252A] text-white">Senden</button>
-                </form>
-                <div className="flex justify-between mt-3">
-                  <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">Zurück</button>
-                  <div className="text-small text-neutrals-500 self-center">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
+              <div className="sticky bottom-0 bg-white border-t px-4 py-3 md:px-6">
+                <div className="mx-auto w-full max-w-3xl space-y-3 pb-[max(0px,env(safe-area-inset-bottom))]">
+                  <form
+                    className="flex items-center gap-2"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const form = e.target as HTMLFormElement;
+                      const input = form.elements.namedItem("msg") as HTMLInputElement;
+                      const value = input.value.trim();
+                      if (!value) return;
+                      setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
+                      input.value = "";
+                      try {
+                        const res = await fetch("/api/fast-track-webhook", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT },
+                          body: JSON.stringify({ summary: basics, followup: value, history }),
+                        });
+                        const text = await res.text();
+                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);
+                      } catch (e) {
+                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: "Fehler beim Abrufen der Antwort." }]);
+                      }
+                    }}
+                  >
+                    <input
+                      name="msg"
+                      placeholder="Nachricht eingeben…"
+                      className="flex-1 h-12 px-3 rounded-xl border"
+                    />
+                    <button type="submit" className="h-12 px-4 rounded-xl bg-[#1D252A] text-white">Senden</button>
+                  </form>
+                  <div className="flex justify-between">
+                    <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">Zurück</button>
+                    <div className="text-small text-neutrals-500 self-center">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
+                  </div>
                 </div>
               </div>
             </section>
