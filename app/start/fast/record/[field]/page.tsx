@@ -14,7 +14,7 @@ import {
   normalizeHistory,
   sanitizePlainText,
 } from "../../shared";
-import { CONTEXT_HEADER_NAME, FAST_TRACK_CONTEXT } from "@/lib/n8n";
+import { CONTEXT_HEADER_NAME, FAST_TRACK_STEP1_CONTEXT } from "@/lib/n8n";
 
 const FIELD_KEYS: FieldKey[] = ["background", "current", "goals"];
 const HISTORY_LIMIT = 10;
@@ -619,7 +619,7 @@ export default function RecordFieldPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+            [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP1_CONTEXT,
             "X-FastTrack-Mode": "feedback",
           },
           body: JSON.stringify({ field, summary }),
@@ -727,7 +727,7 @@ export default function RecordFieldPage() {
         const response = await fetch("/api/fast-track-webhook", {
           method: "POST",
           headers: {
-            [CONTEXT_HEADER_NAME]: FAST_TRACK_CONTEXT,
+            [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP1_CONTEXT,
             "X-FastTrack-Mode": "guidance",
           },
           body: fd,
