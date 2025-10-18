@@ -331,9 +331,9 @@ export default function FastTrack() {
               </div>
 
               <div className="sticky bottom-0 bg-white border-t px-4 py-3 md:px-6">
-                <div className="mx-auto w-full max-w-3xl space-y-3 pb-[max(0px,env(safe-area-inset-bottom))]">
+                <div className="mx-auto w-full max-w-full sm:max-w-3xl space-y-3 pb-[max(0px,env(safe-area-inset-bottom))]">
                   <form
-                    className="flex items-center gap-2"
+                    className="flex w-full items-center gap-2"
                     onSubmit={async (e) => {
                       e.preventDefault();
                       const form = e.target as HTMLFormElement;
@@ -358,7 +358,7 @@ export default function FastTrack() {
                     <input
                       name="msg"
                       placeholder="Nachricht eingeben…"
-                      className="flex-1 h-12 px-3 rounded-xl border"
+                      className="flex-1 min-w-0 h-12 px-3 rounded-xl border"
                     />
                     <button type="submit" className="h-12 px-4 rounded-xl bg-[#1D252A] text-white">Senden</button>
                   </form>
