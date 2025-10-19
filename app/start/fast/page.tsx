@@ -90,19 +90,40 @@ function postProcessFormattedText(text: string): string {
   const spaced: string[] = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    spaced.push(line);
-    const next = lines[i + 1];
     const lineTrimmed = line.trim();
+    const indentMatch = line.match(/^(\s*)([-*]|\d+\.)\s/);
+    if (lineTrimmed) {
+      spaced.push(line);
+    }
+    const next = lines[i + 1];
     const nextTrimmed = next?.trim();
-    const isListLine = lineTrimmed.startsWith("- ") || lineTrimmed.startsWith("* ") || /^\d+\./.test(lineTrimmed);
-    const isNextList = nextTrimmed?.startsWith("- ") || nextTrimmed?.startsWith("* ") || (/^\d+\./.test(nextTrimmed || ""));
+    const nextIndentMatch = next?.match(/^(\s*)([-*]|\d+\.)\s/);
+    const isHeading = /^#{1,6}\s/.test(lineTrimmed) || /^\*\*[^\*]+\*\*$/.test(lineTrimmed);
+    const isNextHeading = nextTrimmed ? /^#{1,6}\s/.test(nextTrimmed) || /^\*\*[^\*]+\*\*$/.test(nextTrimmed) : false;
+    const isListLine = Boolean(indentMatch);
+    const isNextList = Boolean(nextIndentMatch);
+    const hasIndentChange =
+      indentMatch &&
+      nextIndentMatch &&
+      indentMatch[1] !== nextIndentMatch[1];
+
     if (
       next !== undefined &&
       lineTrimmed &&
       nextTrimmed &&
       !isListLine &&
       !isNextList &&
-      !lineTrimmed.startsWith("#")
+      !isHeading &&
+      !isNextHeading
+    ) {
+      spaced.push("");
+    }
+
+    if (
+      next !== undefined &&
+      lineTrimmed &&
+      nextTrimmed &&
+      ((isHeading && !isNextHeading) || (!isHeading && isNextHeading) || hasIndentChange)
     ) {
       spaced.push("");
     }
