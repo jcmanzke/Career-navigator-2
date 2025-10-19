@@ -76,11 +76,39 @@ function parseAgentPayload(raw: string): { formatted: string; conversationId?: s
       }
       payloadForDisplay = Object.keys(rest).length ? rest : "";
     }
-    const formatted = valueToMarkdown(payloadForDisplay);
-    return { formatted: formatted || trimmed, conversationId };
+    const formatted = postProcessFormattedText(valueToMarkdown(payloadForDisplay) || trimmed);
+    return { formatted, conversationId };
   } catch {
-    return { formatted: trimmed };
+    return { formatted: postProcessFormattedText(trimmed) };
   }
+}
+
+function postProcessFormattedText(text: string): string {
+  let processed = text.trimStart();
+  processed = processed.replace(/^\*\*Output\*\*(?:\s*\n)*/i, "");
+  const lines = processed.split("\n");
+  const spaced: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    spaced.push(line);
+    const next = lines[i + 1];
+    const lineTrimmed = line.trim();
+    const nextTrimmed = next?.trim();
+    const isListLine = lineTrimmed.startsWith("- ") || lineTrimmed.startsWith("* ") || /^\d+\./.test(lineTrimmed);
+    const isNextList = nextTrimmed?.startsWith("- ") || nextTrimmed?.startsWith("* ") || (/^\d+\./.test(nextTrimmed || ""));
+    if (
+      next !== undefined &&
+      lineTrimmed &&
+      nextTrimmed &&
+      !isListLine &&
+      !isNextList &&
+      !lineTrimmed.startsWith("#")
+    ) {
+      spaced.push("");
+    }
+  }
+  processed = spaced.join("\n");
+  return processed.trim();
 }
 
 function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
