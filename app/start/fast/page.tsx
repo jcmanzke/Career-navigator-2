@@ -70,9 +70,24 @@ function parseAgentPayload(raw: string): { formatted: string; conversationId?: s
     let conversationId: string | undefined;
     let payloadForDisplay: unknown = parsed;
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      const { conversationId: id, ...rest } = parsed as Record<string, unknown>;
+      const {
+        conversationId: id,
+        content,
+        markdown,
+        message,
+        response,
+        text,
+        ...rest
+      } = parsed as Record<string, unknown>;
       if (typeof id === "string" && id) {
         conversationId = id;
+      }
+      const primary =
+        [content, markdown, message, response, text].find(
+          (value) => typeof value === "string" && value.trim().length,
+        ) ?? null;
+      if (primary) {
+        return { formatted: postProcessFormattedText(primary as string), conversationId };
       }
       payloadForDisplay = Object.keys(rest).length ? rest : "";
     }
@@ -88,13 +103,25 @@ function postProcessFormattedText(text: string): string {
   processed = processed.replace(/^\*\*Output\*\*(?:\s*\n)*/i, "");
   const lines = processed.split("\n");
   const spaced: string[] = [];
+  let inCodeBlock = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineTrimmed = line.trim();
-    const indentMatch = line.match(/^(\s*)([-*]|\d+\.)\s/);
-    if (lineTrimmed) {
+    if (/^```/.test(lineTrimmed)) {
       spaced.push(line);
+      inCodeBlock = !inCodeBlock;
+      continue;
     }
+    if (inCodeBlock) {
+      spaced.push(line);
+      continue;
+    }
+    if (!lineTrimmed) {
+      spaced.push("");
+      continue;
+    }
+    const indentMatch = line.match(/^(\s*)([-*]|\d+\.)\s/);
+    spaced.push(line);
     const next = lines[i + 1];
     const nextTrimmed = next?.trim();
     const nextIndentMatch = next?.match(/^(\s*)([-*]|\d+\.)\s/);
