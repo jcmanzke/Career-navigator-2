@@ -15,6 +15,74 @@ function cls(...xs: (string | false | null | undefined)[]) {
 const STEP3_CHAT_HEADER_NAME = "X-Fast-Track-Origin";
 const STEP3_CHAT_HEADER_VALUE = "fast-track-step-3-chat";
 
+function createConversationId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `conv-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function prettifyKey(key: string) {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^\w|\s\w/g, (c) => c.toUpperCase());
+}
+
+function valueToMarkdown(value: unknown, depth = 0): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const indent = "  ".repeat(depth);
+    return value
+      .map((item) => {
+        const text = valueToMarkdown(item, depth + 1).trim();
+        if (!text) return "";
+        const nestedIndent = "  ".repeat(depth + 1);
+        const formatted = text.replace(/\n/g, `\n${nestedIndent}`);
+        return `${indent}- ${formatted}`;
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, val]) => {
+        const heading = `**${prettifyKey(key)}**`;
+        const body = valueToMarkdown(val, depth + 1).trim();
+        return body ? `${heading}\n${body}` : heading;
+      })
+      .filter(Boolean)
+      .join("\n\n");
+  }
+  return "";
+}
+
+function parseAgentPayload(raw: string): { formatted: string; conversationId?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { formatted: "" };
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (typeof parsed === "string") {
+      return { formatted: parsed };
+    }
+    let conversationId: string | undefined;
+    let payloadForDisplay: unknown = parsed;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const { conversationId: id, ...rest } = parsed as Record<string, unknown>;
+      if (typeof id === "string" && id) {
+        conversationId = id;
+      }
+      payloadForDisplay = Object.keys(rest).length ? rest : "";
+    }
+    const formatted = valueToMarkdown(payloadForDisplay);
+    return { formatted: formatted || trimmed, conversationId };
+  } catch {
+    return { formatted: trimmed };
+  }
+}
+
 function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
   const steps = [1, 2, 3];
   const pct = Math.round(((current - 1) / 3) * 100);
@@ -63,10 +131,7 @@ export default function FastTrack() {
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
-  const [agentResponse, setAgentResponse] = useState<string>("");
-  const step3ChatHeaderName = "X-Fast-Track-Origin";
-  const step3ChatHeaderValue = "fast-track-step-3-chat";
-
+  const [conversationId, setConversationId] = useState<string | null>(null);
   useEffect(() => {
     const id = `step-${Math.max(1, step)}`;
     saveProgress({ track: "fast", stepId: id, updatedAt: Date.now() });
@@ -173,6 +238,8 @@ export default function FastTrack() {
     setLoading(true);
     setResults(null);
     try {
+      const activeConversationId = conversationId ?? createConversationId();
+      setConversationId(activeConversationId);
       const res = await fetch("/api/fast-track-webhook", {
         method: "POST",
         headers: {
@@ -180,7 +247,7 @@ export default function FastTrack() {
           [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
           [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
         },
-        body: JSON.stringify({ userId, sessionId, basics, history }),
+        body: JSON.stringify({ userId, sessionId, basics, history, conversationId: activeConversationId }),
       });
       const text = await res.text();
       let data: any;
@@ -300,9 +367,10 @@ export default function FastTrack() {
                     onClick={async () => {
                       setChatLoading(true);
                       setChatMessages([]);
-                      setAgentResponse("");
+                      const nextConversationId = conversationId ?? createConversationId();
+                      setConversationId(nextConversationId);
                       try {
-                        const payload = { summary: basics };
+                        const payload = { summary: basics, history, conversationId: nextConversationId };
                         const res = await fetch("/api/fast-track-webhook", {
                           method: "POST",
                           headers: {
@@ -310,15 +378,16 @@ export default function FastTrack() {
                             [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
                             [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
                           },
-                          body: JSON.stringify({ ...payload, history }),
+                          body: JSON.stringify(payload),
                         });
                         const text = await res.text();
-                        setChatMessages([{ role: "assistant", content: text }]);
-                        setAgentResponse(text);
+                        const { formatted, conversationId: returnedId } = parseAgentPayload(text);
+                        setChatMessages([{ role: "assistant", content: formatted }]);
+                        if (returnedId) setConversationId(returnedId);
                       } catch (e) {
                         const fallback = "Fehler beim Abrufen der Ergebnisse.";
-                        setAgentResponse(fallback);
-                        setChatMessages([{ role: "assistant", content: fallback }]);
+                        const { formatted } = parseAgentPayload(fallback);
+                        setChatMessages([{ role: "assistant", content: formatted }]);
                       } finally {
                         setChatLoading(false);
                       }
@@ -335,18 +404,6 @@ export default function FastTrack() {
               </div>
 
               <div className="flex-1 min-h-[50vh] max-h-[70vh] overflow-y-auto p-4 space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="agent-response" className="block text-sm font-medium text-neutrals-700">
-                    Antwort der KI
-                  </label>
-                  <textarea
-                    id="agent-response"
-                    value={agentResponse}
-                    readOnly
-                    placeholder="Die Antworten der KI erscheinen hier."
-                    className="w-full min-h-[96px] rounded-2xl border border-neutrals-200 bg-neutrals-0 px-3 py-2 text-sm text-neutrals-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                  />
-                </div>
                 {chatLoading && (
                   <div className="flex items-center gap-3 text-neutrals-600">
                     <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
@@ -370,9 +427,12 @@ export default function FastTrack() {
                       const input = form.elements.namedItem("msg") as HTMLInputElement;
                       const value = input.value.trim();
                       if (!value) return;
+                      const activeConversationId = conversationId ?? createConversationId();
+                      setConversationId(activeConversationId);
                       setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
                       input.value = "";
                       try {
+                        const payload = { summary: basics, followup: value, history, conversationId: activeConversationId };
                         const res = await fetch("/api/fast-track-webhook", {
                           method: "POST",
                           headers: {
@@ -380,15 +440,16 @@ export default function FastTrack() {
                             [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
                             [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
                           },
-                          body: JSON.stringify({ summary: basics, followup: value, history }),
+                          body: JSON.stringify(payload),
                         });
                         const text = await res.text();
-                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: text }]);
-                        setAgentResponse(text);
+                        const { formatted, conversationId: returnedId } = parseAgentPayload(text);
+                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: formatted }]);
+                        if (returnedId) setConversationId(returnedId);
                       } catch (e) {
                         const errorResponse = "Fehler beim Abrufen der Antwort.";
-                        setAgentResponse(errorResponse);
-                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: errorResponse }]);
+                        const { formatted } = parseAgentPayload(errorResponse);
+                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: formatted }]);
                       }
                     }}
                   >
