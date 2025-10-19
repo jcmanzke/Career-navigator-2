@@ -156,8 +156,38 @@ function postProcessFormattedText(text: string): string {
     }
   }
   processed = spaced.join("\n");
+  processed = processed.replace(/([^\s])\n(?=[A-Za-zÀ-ÿ0-9])/g, "$1\n\n");
   return processed.trim();
 }
+
+const markdownComponents = {
+  p: ({ node, ...props }: any) => (
+    <p className="mb-4 last:mb-0 leading-relaxed whitespace-pre-wrap" {...props} />
+  ),
+  h1: ({ node, ...props }: any) => <h1 className="text-xl font-semibold mt-6 mb-3" {...props} />,
+  h2: ({ node, ...props }: any) => <h2 className="text-lg font-semibold mt-5 mb-3" {...props} />,
+  h3: ({ node, ...props }: any) => <h3 className="text-base font-semibold mt-4 mb-2" {...props} />,
+  ul: ({ node, ordered, ...props }: any) => (
+    <ul className="list-disc pl-5 space-y-1 my-3" {...props} />
+  ),
+  ol: ({ node, ordered, ...props }: any) => (
+    <ol className="list-decimal pl-5 space-y-1 my-3" {...props} />
+  ),
+  li: ({ node, ...props }: any) => <li className="leading-relaxed" {...props} />,
+  code: ({ node, inline, className, children, ...props }: any) =>
+    inline ? (
+      <code className="px-1 py-0.5 rounded bg-neutrals-100 text-primary-700" {...props}>
+        {children}
+      </code>
+    ) : (
+      <pre className="bg-neutrals-900 text-neutrals-0 rounded-xl p-3 overflow-x-auto my-4">
+        <code {...props}>{children}</code>
+      </pre>
+    ),
+  blockquote: ({ node, ...props }: any) => (
+    <blockquote className="border-l-4 border-primary-300 pl-4 italic my-4" {...props} />
+  ),
+};
 
 function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
   const steps = [1, 2, 3];
@@ -488,7 +518,9 @@ export default function FastTrack() {
                 )}
                 {chatMessages.map((m, i) => (
                   <div key={i} className={cls("rounded-2xl p-3", m.role === "assistant" ? "bg-neutrals-50" : "bg-primary-50")}> 
-                    <ReactMarkdown className="prose prose-sm max-w-none">{m.content}</ReactMarkdown>
+                    <ReactMarkdown className="prose prose-sm max-w-none" components={markdownComponents}>
+                      {m.content}
+                    </ReactMarkdown>
                   </div>
                 ))}
               </div>
