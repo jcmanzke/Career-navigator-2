@@ -234,6 +234,7 @@ export default function FastTrack() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [basics, setBasics] = useState<Basics>({ background: "", current: "", goals: "" });
   const [history, setHistory] = useState<HistoryRecord>(emptyHistory);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [saving, setSaving] = useState<"idle" | "saving">("idle");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
@@ -284,6 +285,8 @@ export default function FastTrack() {
         }
       } catch (e) {
         console.error(e);
+      } finally {
+        setSessionLoaded(true);
       }
     })();
   }, []);
@@ -316,12 +319,12 @@ export default function FastTrack() {
 
   // Auto-save basics with debounce while typing
   useEffect(() => {
-    if (!userId || step < 1) return;
+    if (!userId || step < 1 || !sessionLoaded) return;
     const t = setTimeout(() => {
       upsertSession({ basics, history });
     }, 600);
     return () => clearTimeout(t);
-  }, [basics, history, userId, step, upsertSession]);
+  }, [basics, history, userId, step, sessionLoaded, upsertSession]);
 
   // Fallback results used if webhook fails
   const dummyData = useMemo(
