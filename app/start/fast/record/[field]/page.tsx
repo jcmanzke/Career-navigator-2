@@ -668,7 +668,14 @@ export default function RecordFieldPage() {
         const limitedEntries = shouldAppend ? nextEntries.slice(-HISTORY_LIMIT) : existing;
         const nextHistory: HistoryRecord = shouldAppend
           ? { ...history, [field]: limitedEntries }
-          : history;
+          : { ...history };
+
+        const fallbackBasics: Basics = {
+          background: sanitizePlainText((nextBasics.background ?? "").toString()),
+          current: sanitizePlainText((nextBasics.current ?? "").toString()),
+          goals: sanitizePlainText((nextBasics.goals ?? "").toString()),
+        };
+        const fallbackHistory = normalizeHistory(nextHistory);
 
         const { data, error: upsertError } = await supabase
           .from("fast_scan_sessions")
@@ -679,20 +686,22 @@ export default function RecordFieldPage() {
               history: nextHistory,
               step: 1,
             },
-            { onConflict: "user_id" },
+            { onConflict: "user_id", returning: "representation" },
           )
           .select("basics, history")
           .single();
 
         if (upsertError) throw upsertError;
 
-        const mergedBasics: Basics = {
-          background: sanitizePlainText(data?.basics?.background ?? ""),
-          current: sanitizePlainText(data?.basics?.current ?? ""),
-          goals: sanitizePlainText(data?.basics?.goals ?? ""),
-        };
+        const mergedBasics: Basics = data?.basics
+          ? {
+              background: sanitizePlainText(data.basics?.background ?? fallbackBasics.background),
+              current: sanitizePlainText(data.basics?.current ?? fallbackBasics.current),
+              goals: sanitizePlainText(data.basics?.goals ?? fallbackBasics.goals),
+            }
+          : fallbackBasics;
         basicsRef.current = mergedBasics;
-        const mergedHistory = normalizeHistory(data?.history);
+        const mergedHistory = data?.history ? normalizeHistory(data.history) : fallbackHistory;
 
         setBasics(mergedBasics);
         setHistory(mergedHistory);
@@ -894,7 +903,7 @@ export default function RecordFieldPage() {
                   type="button"
                   onClick={handleSave}
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-semibold disabled:opacity-60"
-                  disabled={saving || (history[field]?.length ?? 0) === 0}
+                  disabled={saving || !value.trim()}
                 >
                   {saving ? "Speichere…" : "Weiter"}
                 </button>
