@@ -316,6 +316,17 @@ export default function RecordFieldPage() {
     basicsRef.current = basics;
   }, [basics]);
 
+  useEffect(() => {
+    if (!field) return;
+    const latest = sanitizePlainText(
+      history[field]?.[history[field].length - 1]?.text ?? "",
+    );
+    if (latest && latest !== valueRef.current) {
+      valueRef.current = latest;
+      setValue(latest);
+    }
+  }, [field, history]);
+
   const exitToStepOne = useCallback(
     (delay = 0) => {
       setRecorderOpen(false);
@@ -875,6 +886,13 @@ export default function RecordFieldPage() {
   }
 
   const fieldLabelText = useMemo(() => (field ? fieldLabel(field) : ""), [field]);
+  const latestSummary = useMemo(() => {
+    const fromValue = sanitizePlainText(value).trim();
+    const fromHistory = sanitizePlainText(
+      history[field]?.[history[field].length - 1]?.text ?? "",
+    ).trim();
+    return fromValue || fromHistory;
+  }, [field, history, value]);
 
   return (
     <main className="min-h-screen px-4 py-8">
@@ -921,7 +939,7 @@ export default function RecordFieldPage() {
                   id="summary-box"
                   className="w-full rounded-2xl border border-neutrals-200 bg-white p-3 min-h-[120px] whitespace-pre-wrap text-neutrals-900"
                 >
-                  {value.trim() ? value : "Noch nichts gespeichert. Starte eine Aufnahme oder warte auf die Agentenantwort."}
+                  {latestSummary || "Noch nichts gespeichert. Starte eine Aufnahme oder warte auf die Agentenantwort."}
                 </div>
               </div>
 
@@ -941,7 +959,7 @@ export default function RecordFieldPage() {
                   type="button"
                   onClick={handleSave}
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-semibold disabled:opacity-60"
-                  disabled={saving || !value.trim()}
+                  disabled={saving || !latestSummary}
                 >
                   {saving ? "Speichere…" : "Weiter"}
                 </button>
