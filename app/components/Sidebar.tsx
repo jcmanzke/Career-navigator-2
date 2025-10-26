@@ -50,13 +50,16 @@ export default function Sidebar() {
     };
   }, []);
 
-  const supabase = createClient();
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null)).catch(() => {});
+    const client = createClient();
+    client.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null)).catch(() => {});
   }, []);
 
   const logout = async () => {
-    try { await supabase.auth.signOut(); } catch {}
+    try {
+      const client = createClient();
+      await client.auth.signOut();
+    } catch {}
     // Hard navigation to avoid shell/sidebar flicker
     if (typeof window !== 'undefined') window.location.replace('/login');
   };

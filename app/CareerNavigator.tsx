@@ -561,7 +561,7 @@ function Phase3({ journey, setJourney, onNext, onBack, setSaveState }) {
       console.error(e);
       setSaveState('idle');
     }
-  }, 600), [journey.id]);
+  }, 600), [journey.id, setSaveState]);
   const update = (id, field, value) =>
     setJourney((j) => {
       const next = { ...(j.stories || {}), [id]: { ...(j.stories?.[id] || {}), [field]: value } };
@@ -713,7 +713,7 @@ function Phase5({ journey, setJourney, onBack, setSaveState }) {
       console.error(e);
       setSaveState('idle');
     }
-  },600), [journey.id]);
+  },600), [journey.id, setSaveState]);
   const updateField = (field, value) =>
     setJourney((j) => {
       const p = { ...(j.profile || {}), [field]: value };

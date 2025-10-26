@@ -754,7 +754,7 @@ export default function RecordFieldPage() {
         if (!silent) setSaving(false);
       }
     },
-    [basics, field, history, userId],
+    [field, history, userId],
   );
 
   const uploadRecording = useCallback(
@@ -851,7 +851,7 @@ export default function RecordFieldPage() {
         setTranscribing(false);
       }
     },
-    [exitToStepOne, field, history, saveFieldValue, setMessages, userId],
+    [exitToStepOne, field, requestFeedback, saveFieldValue, setMessages, userId],
   );
 
   const handleSave = async () => {
@@ -881,18 +881,19 @@ export default function RecordFieldPage() {
     }
   };
 
-  if (!field) {
-    return null;
-  }
-
   const fieldLabelText = useMemo(() => (field ? fieldLabel(field) : ""), [field]);
   const latestSummary = useMemo(() => {
+    if (!field) return "";
     const fromValue = sanitizePlainText(value).trim();
     const fromHistory = sanitizePlainText(
       history[field]?.[history[field].length - 1]?.text ?? "",
     ).trim();
     return fromValue || fromHistory;
   }, [field, history, value]);
+
+  if (!field) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen px-4 py-8">
