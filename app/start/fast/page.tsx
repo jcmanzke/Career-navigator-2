@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { CONTEXT_HEADER_NAME, FAST_TRACK_STEP3_CONTEXT } from "@/lib/n8n";
 import { Basics, FieldKey, HistoryRecord, emptyHistory, normalizeHistory, sanitizePlainText } from "./shared";
+import { StepOneSection } from "./StepOneSection";
 
 function cls(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -419,58 +420,15 @@ export default function FastTrack() {
           <ProgressSteps3 current={step} onSelect={(n) => { setStep(n); upsertSession({ step: n }); }} />
 
           {step === 1 && (
-            <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
-              <h2 className="text-lg font-semibold mb-2">Schritt 1: Basisinfos</h2>
-              <p className="text-neutrals-700 mb-4">Statt Tippen: per Stimme aufnehmen. Jede Eingabe öffnet ein Pop‑up zur Sprachaufnahme.</p>
-              <div className="grid gap-4 md:grid-cols-3">
-                {(([
-                  { key: "background", label: "Ausbildung und beruflicher Hintergrund" },
-                  { key: "current", label: "Aktuelle Rolle" },
-                  { key: "goals", label: "Ziele und Interessen" },
-                ] as { key: FieldKey; label: string }[])).map((item) => {
-                  const entries = history[item.key] ?? [];
-                  const latestEntry = entries[entries.length - 1];
-                  const hasRecording = Boolean(latestEntry?.text || (basics as any)[item.key]);
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => router.push(`/start/fast/record/${item.key}`)}
-                      className={cls(
-                        "group flex flex-col justify-between rounded-2xl border border-neutrals-200 bg-neutrals-0 p-4 text-left shadow-sm transition-transform",
-                        "hover:shadow-elevation3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
-                      )}
-                      aria-label={`Aufnahme starten: ${item.label}`}
-                    >
-                      <span className="text-base font-medium text-neutrals-900">{item.label}</span>
-                      <div className="mt-6 flex items-center gap-3 text-sm font-semibold text-primary-600">
-                        <span
-                          className={cls(
-                            "flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary-200 bg-primary-100 text-2xl transition-transform group-hover:scale-105",
-                            hasRecording && "border-semantic-success-base bg-semantic-success-surface text-semantic-success-base",
-                          )}
-                          aria-hidden="true"
-                        >
-                          {hasRecording ? "✅" : "🎙️"}
-                        </span>
-                        <span className="text-neutrals-900">Aufnehmen</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex justify-end pt-6">
-                <button
-                  onClick={async () => {
-                    await upsertSession({ step: 2, basics, history });
-                    setStep(2);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-[#1D252A] text-white hover:bg-primary-500 hover:text-neutrals-900"
-                >
-                  Weiter
-                </button>
-              </div>
-            </section>
+            <StepOneSection
+              basics={basics}
+              history={history}
+              onRecord={(fieldKey: FieldKey) => router.push(`/start/fast/record/${fieldKey}`)}
+              onContinue={async () => {
+                await upsertSession({ step: 2, basics, history });
+                setStep(2);
+              }}
+            />
           )}
 
           {step === 2 && (

@@ -15,6 +15,7 @@ import {
   sanitizePlainText,
 } from "../../shared";
 import { CONTEXT_HEADER_NAME, FAST_TRACK_STEP1_CONTEXT } from "@/lib/n8n";
+import { StepOneSection } from "../../StepOneSection";
 
 const FIELD_KEYS: FieldKey[] = ["background", "current", "goals"];
 const HISTORY_LIMIT = 10;
@@ -737,7 +738,19 @@ export default function RecordFieldPage() {
   }
 
   return (
-    <>
+    <main className="relative min-h-screen px-4 py-8">
+      <div className="pointer-events-none">
+        <div className="mx-auto max-w-4xl space-y-6 opacity-95">
+          <StepOneSection
+            basics={basics}
+            history={history}
+            onRecord={(fieldKey) => router.push(`/start/fast/record/${fieldKey}`)}
+            onContinue={() => router.push("/start/fast")}
+            disableActions
+          />
+        </div>
+      </div>
+
       {recorderOpen && (
         <RecordingOverlay
           fieldName={fieldLabelText}
@@ -753,6 +766,6 @@ export default function RecordFieldPage() {
         />
       )}
       {transcribing && !recording && <SendingOverlay message="Übertrage deine Antwort…" />}
-    </>
+    </main>
   );
 }
