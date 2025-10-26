@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
@@ -239,6 +239,7 @@ export default function FastTrack() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
     const id = `step-${Math.max(1, step)}`;
     saveProgress({ track: "fast", stepId: id, updatedAt: Date.now() });
@@ -260,6 +261,7 @@ export default function FastTrack() {
           .single();
         if (row) {
           setSessionId(row.id);
+          sessionIdRef.current = row.id ?? sessionIdRef.current;
           const nextStep = typeof row.step === "number" && row.step >= 1 ? row.step : 1;
           setStep(nextStep);
           if (row.basics)
@@ -279,6 +281,7 @@ export default function FastTrack() {
             .single();
           if (!error && created) {
             setSessionId(created.id);
+            sessionIdRef.current = created.id ?? sessionIdRef.current;
             const nextStep = typeof created.step === "number" && created.step >= 1 ? created.step : 1;
             setStep(nextStep);
           }
@@ -294,27 +297,60 @@ export default function FastTrack() {
   const upsertSession = useCallback(
     async (patch: Partial<{ step: number; basics: Basics; history: HistoryRecord; results: any }>) => {
       if (!userId) return;
+      const updates: Record<string, unknown> = {};
+      if (typeof patch.step === "number") updates.step = patch.step;
+      if (patch.basics) updates.basics = patch.basics;
+      if (patch.history) updates.history = patch.history;
+      if ("results" in patch) updates.results = patch.results;
+      if (!Object.keys(updates).length) return;
       try {
         setSaving("saving");
         const supabase = createClient();
-        const payload: any = { user_id: userId };
-        if (typeof patch.step === "number") payload.step = patch.step;
-        if (patch.basics) payload.basics = patch.basics;
-        if (patch.history) payload.history = patch.history;
-        if ("results" in patch) payload.results = patch.results;
-        const { data } = await supabase
-          .from("fast_scan_sessions")
-          .upsert(payload, { onConflict: "user_id" })
-          .select()
-          .single();
-        if (data?.id) setSessionId(data.id);
+        let savedRow: { id?: string } | null = null;
+
+        if (sessionIdRef.current) {
+          const { data: updated, error: updateError } = await supabase
+            .from("fast_scan_sessions")
+            .update(updates)
+            .eq("id", sessionIdRef.current)
+            .select("id")
+            .single();
+          if (updateError && updateError.code !== "PGRST116") {
+            throw updateError;
+          }
+          if (!updateError && updated) {
+            savedRow = updated;
+          }
+        }
+
+        if (!savedRow) {
+          const insertPayload = {
+            user_id: userId,
+            step: (updates.step as number) ?? step,
+            basics: (updates.basics as Basics) ?? basics,
+            history: (updates.history as HistoryRecord) ?? history,
+            results: "results" in updates ? updates.results : results,
+          };
+          const { data: inserted, error: insertError } = await supabase
+            .from("fast_scan_sessions")
+            .insert(insertPayload)
+            .select("id")
+            .single();
+          if (insertError) throw insertError;
+          savedRow = inserted;
+        }
+
+        if (savedRow?.id) {
+          setSessionId(savedRow.id);
+          sessionIdRef.current = savedRow.id;
+        }
       } catch (e) {
         console.error(e);
       } finally {
         setSaving("idle");
       }
     },
-    [userId],
+    [basics, history, results, step, userId],
   );
 
   // Auto-save basics with debounce while typing

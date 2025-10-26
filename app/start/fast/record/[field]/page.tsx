@@ -306,6 +306,7 @@ export default function RecordFieldPage() {
   const valueRef = useRef("");
   const recordingStartRef = useRef<number | null>(null);
   const basicsRef = useRef<Basics>(basics);
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     valueRef.current = value;
@@ -320,6 +321,7 @@ export default function RecordFieldPage() {
       setRecorderOpen(false);
       const navigate = () => {
         router.push("/start/fast");
+        router.refresh();
       };
       if (delay > 0) {
         setTimeout(navigate, delay);
@@ -355,7 +357,7 @@ export default function RecordFieldPage() {
 
         const { data: row, error: selectError } = await supabase
           .from("fast_scan_sessions")
-          .select("basics, history")
+          .select("id, basics, history")
           .eq("user_id", user.id)
           .single();
 
@@ -364,6 +366,7 @@ export default function RecordFieldPage() {
         }
 
         if (row) {
+          sessionIdRef.current = row.id ?? sessionIdRef.current;
           basicsData = {
             background: sanitizePlainText(row.basics?.background ?? ""),
             current: sanitizePlainText(row.basics?.current ?? ""),
@@ -374,9 +377,10 @@ export default function RecordFieldPage() {
           const { data: created, error: insertError } = await supabase
             .from("fast_scan_sessions")
             .insert({ user_id: user.id, step: 1, basics: {}, history: {} })
-            .select("basics, history")
+            .select("id, basics, history")
             .single();
           if (insertError) throw insertError;
+          sessionIdRef.current = created?.id ?? sessionIdRef.current;
           basicsData = {
             background: sanitizePlainText(created?.basics?.background ?? ""),
             current: sanitizePlainText(created?.basics?.current ?? ""),
@@ -677,31 +681,53 @@ export default function RecordFieldPage() {
         };
         const fallbackHistory = normalizeHistory(nextHistory);
 
-        const { data, error: upsertError } = await supabase
-          .from("fast_scan_sessions")
-          .upsert(
-            {
-              user_id: userId,
-              basics: nextBasics,
-              history: nextHistory,
-              step: 1,
-            },
-            { onConflict: "user_id", returning: "representation" },
-          )
-          .select("basics, history")
-          .single();
+        const basePayload = {
+          basics: nextBasics,
+          history: nextHistory,
+          step: 1,
+        };
 
-        if (upsertError) throw upsertError;
+        let savedRow: { id?: string; basics?: any; history?: any } | null = null;
 
-        const mergedBasics: Basics = data?.basics
+        if (sessionIdRef.current) {
+          const { data: updated, error: updateError } = await supabase
+            .from("fast_scan_sessions")
+            .update(basePayload)
+            .eq("id", sessionIdRef.current)
+            .select("id, basics, history")
+            .single();
+
+          if (updateError && updateError.code !== "PGRST116") {
+            throw updateError;
+          }
+          if (!updateError && updated) {
+            savedRow = updated;
+          }
+        }
+
+        if (!savedRow) {
+          const { data: inserted, error: insertError } = await supabase
+            .from("fast_scan_sessions")
+            .insert({ user_id: userId, ...basePayload })
+            .select("id, basics, history")
+            .single();
+          if (insertError) throw insertError;
+          savedRow = inserted;
+        }
+
+        if (savedRow?.id) {
+          sessionIdRef.current = savedRow.id;
+        }
+
+        const mergedBasics: Basics = savedRow?.basics
           ? {
-              background: sanitizePlainText(data.basics?.background ?? fallbackBasics.background),
-              current: sanitizePlainText(data.basics?.current ?? fallbackBasics.current),
-              goals: sanitizePlainText(data.basics?.goals ?? fallbackBasics.goals),
+              background: sanitizePlainText(savedRow.basics?.background ?? fallbackBasics.background),
+              current: sanitizePlainText(savedRow.basics?.current ?? fallbackBasics.current),
+              goals: sanitizePlainText(savedRow.basics?.goals ?? fallbackBasics.goals),
             }
           : fallbackBasics;
         basicsRef.current = mergedBasics;
-        const mergedHistory = data?.history ? normalizeHistory(data.history) : fallbackHistory;
+        const mergedHistory = savedRow?.history ? normalizeHistory(savedRow.history) : fallbackHistory;
 
         setBasics(mergedBasics);
         setHistory(mergedHistory);
@@ -887,6 +913,18 @@ export default function RecordFieldPage() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-small text-neutrals-500" htmlFor="summary-box">
+                  Deine Zusammenfassung
+                </label>
+                <div
+                  id="summary-box"
+                  className="w-full rounded-2xl border border-neutrals-200 bg-white p-3 min-h-[120px] whitespace-pre-wrap text-neutrals-900"
+                >
+                  {value.trim() ? value : "Noch nichts gespeichert. Starte eine Aufnahme oder warte auf die Agentenantwort."}
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
@@ -932,6 +970,9 @@ export default function RecordFieldPage() {
                     <div className="flex items-center justify-between text-small text-neutrals-600">
                       <span>{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                       <span className="text-neutrals-500">Dauer: {duration}</span>
+                    </div>
+                    <div className="mt-2 text-neutrals-900 whitespace-pre-wrap break-words">
+                      {entry.text || "—"}
                     </div>
                   </li>
                 );
