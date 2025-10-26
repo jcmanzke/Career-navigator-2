@@ -9,7 +9,7 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "allowJs": true,
-    "strict": false,
+    "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "baseUrl": ".",
@@ -31,6 +31,10 @@
   },
   "include": [
     "app/**/*",
+    "lib/**/*",
+    "utils/**/*",
+    "tests/**/*",
+    "types/**/*",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

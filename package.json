@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "node scripts/lint-stub.js",
-    "test": "node tests/progress.test.js",
+    "lint": "next lint",
+    "test": "node -e \"require('fs').rmSync('.tmp-tests',{recursive:true,force:true});\" && tsc --project tsconfig.test.json && node .tmp-tests/tests/progress.test.js",
     "check:supabase": "node scripts/checkSupabase.mjs",
     "docs:sync": "node scripts/context7-sync.mjs",
     "docs:fetch": "node scripts/context7-sync.mjs"

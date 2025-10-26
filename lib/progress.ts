@@ -53,7 +53,7 @@ export function clearProgress(storage: StorageLike | null = getDefaultStorage())
 }
 
 export function getResumeUrl(p: Progress): string {
-  const base = p.track === "fast" ? "/start/fast" : "/deep"; // deep goes to main exercise
+  const base = p.track === "fast" ? "/start/fast" : "/start/deep";
   const q = p.stepId ? `?step=${encodeURIComponent(p.stepId)}` : "";
   return `${base}${q}`;
 }
