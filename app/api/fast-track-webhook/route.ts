@@ -5,16 +5,18 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const incomingContentType = req.headers.get("content-type") || "application/json";
-    const contextHeader = req.headers.get(CONTEXT_HEADER_NAME) || FAST_TRACK_STEP1_CONTEXT;
+    const incomingHeaders = new Headers();
+    req.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "host") return;
+      incomingHeaders.set(key, value);
+    });
+    const contextHeader = incomingHeaders.get(CONTEXT_HEADER_NAME) || FAST_TRACK_STEP1_CONTEXT;
+    incomingHeaders.set(CONTEXT_HEADER_NAME, contextHeader);
     const bodyBuffer = await req.arrayBuffer();
 
     const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": incomingContentType,
-        [CONTEXT_HEADER_NAME]: contextHeader,
-      },
+      headers: incomingHeaders,
       body: bodyBuffer.byteLength ? bodyBuffer : undefined,
     });
 
