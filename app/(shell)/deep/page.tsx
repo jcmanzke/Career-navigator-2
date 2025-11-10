@@ -1,12 +1,19 @@
 "use client";
 
-import LoginScreen from "@/app/components/LoginScreen";
-import Sidebar from "@/app/components/Sidebar";
 import CareerNavigatorLoader from "@/app/CareerNavigatorLoader";
 import { useSupabaseSession } from "@/lib/useSupabaseSession";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function DeepPage() {
   const { session, loading, error } = useSupabaseSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !session && !error) {
+      router.replace("/login");
+    }
+  }, [loading, session, error, router]);
 
   if (loading) return null;
 
@@ -19,15 +26,8 @@ export default function DeepPage() {
   }
 
   if (!session) {
-    return <LoginScreen />;
+    return null;
   }
 
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex-1 min-w-0">
-        <CareerNavigatorLoader />
-      </div>
-    </div>
-  );
+  return <CareerNavigatorLoader />;
 }
