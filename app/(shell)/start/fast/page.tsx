@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
@@ -547,18 +547,36 @@ export default function FastTrack() {
                 </div>
                 <div className="flex-1 min-h-[300px] px-4 py-4 space-y-3">
                   {chatLoading && chatMessages.length === 0 && (
-                    <div className="space-y-3 rounded-2xl border border-dashed border-primary-200 bg-primary-50/50 p-4">
-                      <div className="flex items-center gap-3 text-sm text-neutrals-600">
-                        <span className="h-4 w-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
-                        <span>Wir verdichten deine Antworten …</span>
+                    <div className="space-y-6 rounded-3xl border border-primary-200/60 bg-gradient-to-br from-primary-50 via-white to-primary-100 p-6 text-center shadow-inner">
+                      <div className="mx-auto flex h-28 w-28 items-center justify-center">
+                        <div className="relative h-24 w-24">
+                          <span className="cn-pulse-ring absolute inset-0 rounded-full bg-primary-200/40" aria-hidden="true" />
+                          <span className="cn-orbit absolute inset-2 rounded-full border border-primary-200" aria-hidden="true" />
+                          <span className="cn-orbit-slow absolute inset-4 rounded-full border border-primary-100" aria-hidden="true" />
+                          <div className="relative flex h-full w-full items-center justify-center rounded-full bg-white shadow-elevation2">
+                            <img
+                              src="/apple-touch-icon.png"
+                              alt="Career Navigator Logo"
+                              className="h-12 w-12 object-contain cn-icon-glow"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="h-3 rounded-full bg-primary-100 animate-pulse" />
-                        <div className="h-3 w-3/4 rounded-full bg-primary-100 animate-pulse" style={{ animationDelay: "120ms" }} />
-                        <div className="h-3 w-1/2 rounded-full bg-primary-100 animate-pulse" style={{ animationDelay: "240ms" }} />
+                      <div>
+                        <p className="font-medium text-neutrals-900">Wir verdichten deine Antworten …</p>
+                        <p className="text-sm text-neutrals-600">Dauert nur wenige Sekunden.</p>
                       </div>
-                      <div className="relative h-2 overflow-hidden rounded-full bg-primary-200">
-                        <div className="absolute inset-0 w-1/2 rounded-full bg-primary-500 animate-pulse" />
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex w-full max-w-xs justify-center gap-2">
+                          {[0, 1, 2].map((i) => (
+                            <span
+                              key={i}
+                              className="cn-loading-bar h-2 flex-1 rounded-full bg-primary-400/60"
+                              style={{ animationDelay: `${i * 0.15}s` } as CSSProperties}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-xs uppercase tracking-wide text-primary-600">Analyse läuft</p>
                       </div>
                     </div>
                   )}
