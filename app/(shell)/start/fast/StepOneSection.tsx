@@ -57,7 +57,7 @@ export function StepOneSection({
   return (
     <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">Schritt 1: Erfassen</h2>
+        <h2 className="text-lg font-semibold">Schritt 1: Background Informationen</h2>
         <p className="text-neutrals-600">
           Nimm zu jeder Kategorie kurz eine Sprachnachricht auf. Du kannst jederzeit neu aufnehmen.
         </p>

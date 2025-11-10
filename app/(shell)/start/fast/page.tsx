@@ -465,7 +465,7 @@ export default function FastTrack() {
           {step === 2 && (
             <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6">
               <h2 className="text-lg font-semibold mb-2">Schritt 2: Bestätigung</h2>
-              <p className="text-neutrals-700 mb-4">Kurz prüfen und bestätigen. Danach werden die Ergebnisse erzeugt.</p>
+              <p className="text-neutrals-700 mb-4">Unsere KI hat deine Eingaben zusammengefasst. Ließ am besten einmal drüber und überlege, welche Informationen noch fehlen.</p>
               <div className="rounded-2xl border p-4 bg-neutrals-0">
                 <div className="text-small text-neutrals-500 mb-1">Ausbildung und beruflicher Hintergrund</div>
                 <div className="mb-3">{basics.background || "—"}</div>
@@ -494,7 +494,7 @@ export default function FastTrack() {
               <div>
                 <h2 className="text-lg font-semibold text-neutrals-900">Schritt 3: Ergebnisse generieren</h2>
                 <p className="text-neutrals-700 mt-2">
-                  Wir fassen deine Antworten zu konkreten Rollen, Skill-Fokus und einer Sofortmaßnahme zusammen. Du kannst jederzeit nachhaken oder ergänzen.
+                  Wir fassen deine Antworten zu konkreten Rollen, Skill-Fokus und klaren Suchbegriffen für Jobs zusammen. Du kannst jederzeit nachhaken oder ergänzen.
                 </p>
               </div>
 
