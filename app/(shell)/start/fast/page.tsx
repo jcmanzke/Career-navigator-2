@@ -490,116 +490,148 @@ export default function FastTrack() {
           )}
 
           {step === 3 && (
-            <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-0 md:p-6 flex flex-col">
-              <div className="p-6 border-b">
-                <h2 className="text-lg font-semibold">Schritt 3: Ergebnisse generieren</h2>
-                <p className="text-neutrals-600 mt-1">Erzeugt ein Ergebnis basierend auf deinen Eingaben. Ergebnis erscheint darunter im Chat.</p>
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    disabled={chatLoading}
-                    onClick={async () => {
-                      setChatLoading(true);
-                      setChatMessages([]);
-                      const nextConversationId = conversationId ?? createConversationId();
-                      setConversationId(nextConversationId);
-                      try {
-                        const payload = { summary: basics, history, conversationId: nextConversationId };
-                        const res = await fetch("/api/fast-track-webhook", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
-                            [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
-                          },
-                          body: JSON.stringify(payload),
-                        });
-                        const text = await res.text();
-                        const { formatted, conversationId: returnedId } = parseAgentPayload(text);
-                        setChatMessages([{ role: "assistant", content: formatted }]);
-                        if (returnedId) setConversationId(returnedId);
-                      } catch (e) {
-                        const fallback = "Fehler beim Abrufen der Ergebnisse.";
-                        const { formatted } = parseAgentPayload(fallback);
-                        setChatMessages([{ role: "assistant", content: formatted }]);
-                      } finally {
-                        setChatLoading(false);
-                      }
-                    }}
-                    className={cls(
-                      "group relative inline-flex items-center justify-center w-full md:w-auto h-12 px-4",
-                      "rounded-2xl bg-primary-500 text-[#2C2C2C] font-semibold",
-                      chatLoading && "opacity-80 cursor-not-allowed",
-                    )}
-                  >
-                    {chatLoading ? "Verarbeite…" : "Ergebnisse generieren"}
-                  </button>
-                </div>
+            <section className="rounded-3xl border border-neutrals-200/60 bg-neutrals-0/60 backdrop-blur-md shadow-elevation2 p-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold text-neutrals-900">Schritt 3: Ergebnisse generieren</h2>
+                <p className="text-neutrals-700 mt-2">
+                  Wir fassen deine Antworten zu konkreten Rollen, Skill-Fokus und einer Sofortmaßnahme zusammen. Du kannst jederzeit nachhaken oder ergänzen.
+                </p>
               </div>
 
-              <div className="flex-1 min-h-[50vh] max-h-[70vh] overflow-y-auto p-4 space-y-4">
-                {chatLoading && (
-                  <div className="flex items-center gap-3 text-neutrals-600">
-                    <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
-                    <span>Verarbeite…</span>
-                  </div>
+              <button
+                type="button"
+                disabled={chatLoading}
+                onClick={async () => {
+                  setChatLoading(true);
+                  setChatMessages([]);
+                  const nextConversationId = conversationId ?? createConversationId();
+                  setConversationId(nextConversationId);
+                  try {
+                    const payload = { summary: basics, history, conversationId: nextConversationId };
+                    const res = await fetch("/api/fast-track-webhook", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
+                        [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
+                      },
+                      body: JSON.stringify(payload),
+                    });
+                    const text = await res.text();
+                    const { formatted, conversationId: returnedId } = parseAgentPayload(text);
+                    setChatMessages([{ role: "assistant", content: formatted }]);
+                    if (returnedId) setConversationId(returnedId);
+                  } catch (e) {
+                    const fallback = "Fehler beim Abrufen der Ergebnisse.";
+                    const { formatted } = parseAgentPayload(fallback);
+                    setChatMessages([{ role: "assistant", content: formatted }]);
+                  } finally {
+                    setChatLoading(false);
+                  }
+                }}
+                className={cls(
+                  "inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 font-semibold text-[#2C2C2C]",
+                  "bg-primary-500 transition hover:bg-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500",
+                  chatLoading && "opacity-70 cursor-not-allowed",
                 )}
-                {chatMessages.map((m, i) => (
-                  <div key={i} className={cls("rounded-2xl p-3", m.role === "assistant" ? "bg-neutrals-50" : "bg-primary-50")}> 
-                    <ReactMarkdown className="prose prose-sm max-w-none" components={markdownComponents}>
-                      {m.content}
-                    </ReactMarkdown>
+              >
+                {chatLoading ? "Verarbeite…" : "Ergebnisse generieren"}
+              </button>
+
+              <div className="rounded-2xl border border-neutrals-200 bg-white/95 flex flex-col">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-neutrals-500">Live-Ausgabe</p>
+                    <p className="text-base font-semibold text-neutrals-900">Fast-Track Chat</p>
                   </div>
-                ))}
+                  {conversationId && (
+                    <span className="rounded-full bg-neutrals-100 px-3 py-1 text-xs text-neutrals-500 truncate max-w-[150px]">
+                      {conversationId.slice(0, 16)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-h-[300px] max-h-[55vh] overflow-y-auto px-4 py-4 space-y-3">
+                  {chatLoading && (
+                    <div className="flex items-center gap-3 text-neutrals-600 text-sm">
+                      <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Verarbeite…</span>
+                    </div>
+                  )}
+                  {!chatLoading && chatMessages.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-neutrals-200 bg-neutrals-50 p-4 text-sm text-neutrals-600">
+                      Starte die Generierung oder stelle eine Frage, um hier Ergebnisse zu sehen.
+                    </div>
+                  )}
+                  {chatMessages.map((m, i) => (
+                    <div
+                      key={`${m.role}-${i}`}
+                      className={cls(
+                        "rounded-2xl p-4 text-sm shadow-sm",
+                        m.role === "assistant"
+                          ? "bg-neutrals-50 border border-neutrals-200"
+                          : "bg-primary-50 border border-primary-200",
+                      )}
+                    >
+                      <ReactMarkdown className="prose prose-sm max-w-none" components={markdownComponents}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  ))}
+                </div>
+                <form
+                  className="border-t px-3 py-3 flex flex-col gap-3 sm:flex-row sm:items-center"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const input = form.elements.namedItem("msg") as HTMLInputElement;
+                    const value = input.value.trim();
+                    if (!value) return;
+                    const activeConversationId = conversationId ?? createConversationId();
+                    setConversationId(activeConversationId);
+                    setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
+                    input.value = "";
+                    try {
+                      const payload = { summary: basics, followup: value, history, conversationId: activeConversationId };
+                      const res = await fetch("/api/fast-track-webhook", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
+                          [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
+                        },
+                        body: JSON.stringify(payload),
+                      });
+                      const text = await res.text();
+                      const { formatted, conversationId: returnedId } = parseAgentPayload(text);
+                      setChatMessages((msgs) => [...msgs, { role: "assistant", content: formatted }]);
+                      if (returnedId) setConversationId(returnedId);
+                    } catch (e) {
+                      const errorResponse = "Fehler beim Abrufen der Antwort.";
+                      const { formatted } = parseAgentPayload(errorResponse);
+                      setChatMessages((msgs) => [...msgs, { role: "assistant", content: formatted }]);
+                    }
+                  }}
+                >
+                  <input
+                    name="msg"
+                    placeholder="Nachricht eingeben…"
+                    className="flex-1 min-w-0 h-12 rounded-xl border border-neutrals-300 px-3 text-sm focus:border-primary-400 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="h-12 rounded-xl bg-[#1D252A] px-5 text-sm font-semibold text-white transition hover:bg-primary-500 hover:text-neutrals-900"
+                  >
+                    Senden
+                  </button>
+                </form>
               </div>
 
-              <div className="sticky bottom-0 bg-white border-t px-4 py-3 md:px-6">
-                <div className="mx-auto w-full max-w-full sm:max-w-3xl space-y-3 pb-[max(0px,env(safe-area-inset-bottom))]">
-                  <form
-                    className="flex w-full items-center gap-2"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const form = e.target as HTMLFormElement;
-                      const input = form.elements.namedItem("msg") as HTMLInputElement;
-                      const value = input.value.trim();
-                      if (!value) return;
-                      const activeConversationId = conversationId ?? createConversationId();
-                      setConversationId(activeConversationId);
-                      setChatMessages((msgs) => [...msgs, { role: "user", content: value }]);
-                      input.value = "";
-                      try {
-                        const payload = { summary: basics, followup: value, history, conversationId: activeConversationId };
-                        const res = await fetch("/api/fast-track-webhook", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
-                            [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
-                          },
-                          body: JSON.stringify(payload),
-                        });
-                        const text = await res.text();
-                        const { formatted, conversationId: returnedId } = parseAgentPayload(text);
-                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: formatted }]);
-                        if (returnedId) setConversationId(returnedId);
-                      } catch (e) {
-                        const errorResponse = "Fehler beim Abrufen der Antwort.";
-                        const { formatted } = parseAgentPayload(errorResponse);
-                        setChatMessages((msgs) => [...msgs, { role: "assistant", content: formatted }]);
-                      }
-                    }}
-                  >
-                    <input
-                      name="msg"
-                      placeholder="Nachricht eingeben…"
-                      className="flex-1 min-w-0 h-12 px-3 rounded-xl border"
-                    />
-                    <button type="submit" className="h-12 px-4 rounded-xl bg-[#1D252A] text-white">Senden</button>
-                  </form>
-                  <div className="flex justify-between">
-                    <button onClick={() => setStep(2)} className="px-4 py-2 rounded-xl border">Zurück</button>
-                    <div className="text-small text-neutrals-500 self-center">{saving === "saving" ? "Speichere…" : "Gespeichert"}</div>
-                  </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <button onClick={() => setStep(2)} className="rounded-xl border px-4 py-2 text-sm text-neutrals-700">
+                  Zurück zu Schritt 2
+                </button>
+                <div className="text-xs text-neutrals-500">
+                  {saving === "saving" ? "Speichere aktuellen Stand …" : "Alle Änderungen gespeichert."}
                 </div>
               </div>
             </section>
