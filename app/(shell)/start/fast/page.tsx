@@ -192,7 +192,36 @@ const markdownComponents = {
 
 function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n: number) => void }) {
   const steps = [1, 2, 3];
-  const pct = Math.round(((current - 1) / 3) * 100);
+  const pctTargets = [33, 66, 100];
+  const targetPct = pctTargets[current - 1] ?? 0;
+  const [displayPct, setDisplayPct] = useState(targetPct);
+  const previousPctRef = useRef(targetPct);
+
+  useEffect(() => {
+    const initial = previousPctRef.current;
+    if (initial === targetPct) {
+      setDisplayPct(targetPct);
+      return;
+    }
+    let raf: number;
+    const duration = 500;
+    const start = performance.now();
+    const animate = (timestamp: number) => {
+      const progress = Math.min(1, (timestamp - start) / duration);
+      const nextValue = initial + (targetPct - initial) * progress;
+      setDisplayPct(nextValue);
+      if (progress < 1) {
+        raf = requestAnimationFrame(animate);
+      } else {
+        previousPctRef.current = targetPct;
+      }
+    };
+    raf = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [targetPct]);
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-center gap-3 mb-2">
@@ -218,9 +247,11 @@ function ProgressSteps3({ current, onSelect }: { current: number; onSelect?: (n:
         ))}
       </div>
       <div className="h-2 bg-neutrals-200 rounded-full">
-        <div className="h-2 bg-primary-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        <div className="h-2 bg-primary-500 rounded-full" style={{ width: `${displayPct}%` }} />
       </div>
-      <p className="text-center text-small text-neutrals-500 mt-1">Fortschritt: {pct}%</p>
+      <p className="text-center text-small text-neutrals-500 mt-1">
+        Fortschritt: {Math.round(displayPct)}%
+      </p>
     </div>
   );
 }
