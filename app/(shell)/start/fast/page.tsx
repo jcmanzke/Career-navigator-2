@@ -530,7 +530,7 @@ export default function FastTrack() {
                   }
                 }}
                 className={cls(
-                  "inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 font-semibold text-[#2C2C2C]",
+                  "mt-4 mb-2 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 font-semibold text-[#2C2C2C]",
                   "bg-primary-500 transition hover:bg-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500",
                   chatLoading && "opacity-70 cursor-not-allowed",
                 )}
@@ -544,14 +544,25 @@ export default function FastTrack() {
                     <p className="text-xs uppercase tracking-wide text-neutrals-500">Live-Ausgabe</p>
                     <p className="text-base font-semibold text-neutrals-900">Fast-Track Chat</p>
                   </div>
-                  {conversationId && (
-                    <span className="rounded-full bg-neutrals-100 px-3 py-1 text-xs text-neutrals-500 truncate max-w-[150px]">
-                      {conversationId.slice(0, 16)}
-                    </span>
-                  )}
                 </div>
-                <div className="flex-1 min-h-[300px] max-h-[55vh] overflow-y-auto px-4 py-4 space-y-3">
-                  {chatLoading && (
+                <div className="flex-1 min-h-[300px] px-4 py-4 space-y-3">
+                  {chatLoading && chatMessages.length === 0 && (
+                    <div className="space-y-3 rounded-2xl border border-dashed border-primary-200 bg-primary-50/50 p-4">
+                      <div className="flex items-center gap-3 text-sm text-neutrals-600">
+                        <span className="h-4 w-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                        <span>Wir verdichten deine Antworten …</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-3 rounded-full bg-primary-100 animate-pulse" />
+                        <div className="h-3 w-3/4 rounded-full bg-primary-100 animate-pulse" style={{ animationDelay: "120ms" }} />
+                        <div className="h-3 w-1/2 rounded-full bg-primary-100 animate-pulse" style={{ animationDelay: "240ms" }} />
+                      </div>
+                      <div className="relative h-2 overflow-hidden rounded-full bg-primary-200">
+                        <div className="absolute inset-0 w-1/2 rounded-full bg-primary-500 animate-pulse" />
+                      </div>
+                    </div>
+                  )}
+                  {chatLoading && chatMessages.length > 0 && (
                     <div className="flex items-center gap-3 text-neutrals-600 text-sm">
                       <span className="h-4 w-4 border-2 border-neutrals-400 border-t-transparent rounded-full animate-spin" />
                       <span>Verarbeite…</span>
@@ -626,7 +637,7 @@ export default function FastTrack() {
                 </form>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-10 pt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <button onClick={() => setStep(2)} className="rounded-xl border px-4 py-2 text-sm text-neutrals-700">
                   Zurück zu Schritt 2
                 </button>
