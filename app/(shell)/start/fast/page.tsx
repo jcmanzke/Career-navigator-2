@@ -14,8 +14,8 @@ function cls(...xs: (string | false | null | undefined)[]) {
 }
 
 const STEP3_CHAT_HEADER_NAME = "X-Fast-Track-Origin";
-const STEP3_CHAT_HEADER_VALUE = "fast-track-step-3-chat";
-const STEP3_CHAT_FOLLOWUP_HEADER_VALUE = "fast-track-step-3-followup";
+const STEP3_CHAT_HEADER_VALUE = "Fast track 3";
+const STEP3_CHAT_FOLLOWUP_HEADER_VALUE = "followup";
 
 function createConversationId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
