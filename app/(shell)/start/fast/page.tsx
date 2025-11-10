@@ -15,6 +15,7 @@ function cls(...xs: (string | false | null | undefined)[]) {
 
 const STEP3_CHAT_HEADER_NAME = "X-Fast-Track-Origin";
 const STEP3_CHAT_HEADER_VALUE = "fast-track-step-3-chat";
+const STEP3_CHAT_FOLLOWUP_HEADER_VALUE = "fast-track-step-3-followup";
 
 function createConversationId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -563,7 +564,7 @@ export default function FastTrack() {
                         </div>
                       </div>
                       <div>
-                        <p className="font-medium text-neutrals-900">Wir verdichten deine Antworten …</p>
+                        <p className="font-medium text-neutrals-900">Wir generieren deine Ergebnisse …</p>
                         <p className="text-sm text-neutrals-600">Dauert nur wenige Sekunden.</p>
                       </div>
                       <div className="flex flex-col items-center gap-2">
@@ -626,7 +627,7 @@ export default function FastTrack() {
                         headers: {
                           "Content-Type": "application/json",
                           [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
-                          [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_HEADER_VALUE,
+                          [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_FOLLOWUP_HEADER_VALUE,
                         },
                         body: JSON.stringify(payload),
                       });
