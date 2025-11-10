@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveProgress } from "@/lib/progress";
 import { createClient } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
-import { CONTEXT_HEADER_NAME, FAST_TRACK_STEP3_CONTEXT } from "@/lib/n8n";
+import { CONTEXT_HEADER_NAME, FAST_TRACK_STEP3_CONTEXT, FAST_TRACK_STEP3_FOLLOWUP_CONTEXT } from "@/lib/n8n";
 import { Basics, FieldKey, HistoryRecord, emptyHistory, normalizeHistory, sanitizePlainText } from "./shared";
 import { StepOneSection } from "./StepOneSection";
 
@@ -626,7 +626,7 @@ export default function FastTrack() {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",
-                          [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_CONTEXT,
+                          [CONTEXT_HEADER_NAME]: FAST_TRACK_STEP3_FOLLOWUP_CONTEXT,
                           [STEP3_CHAT_HEADER_NAME]: STEP3_CHAT_FOLLOWUP_HEADER_VALUE,
                         },
                         body: JSON.stringify(payload),
