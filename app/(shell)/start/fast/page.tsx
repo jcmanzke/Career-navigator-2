@@ -596,15 +596,22 @@ export default function FastTrack() {
                     <div
                       key={`${m.role}-${i}`}
                       className={cls(
-                        "rounded-2xl p-4 text-sm shadow-sm",
-                        m.role === "assistant"
-                          ? "bg-neutrals-50 border border-neutrals-200"
-                          : "bg-primary-50 border border-primary-200",
+                        "flex py-1",
+                        m.role === "assistant" ? "justify-start" : "justify-end",
                       )}
                     >
-                      <ReactMarkdown className="prose prose-sm max-w-none" components={markdownComponents}>
-                        {m.content}
-                      </ReactMarkdown>
+                      <div
+                        className={cls(
+                          "max-w-full rounded-2xl p-4 text-sm shadow-sm sm:max-w-[70%]",
+                          m.role === "assistant"
+                            ? "bg-neutrals-50 border border-neutrals-200"
+                            : "bg-primary-100 border border-primary-300 pl-6",
+                        )}
+                      >
+                        <ReactMarkdown className="prose prose-sm max-w-none" components={markdownComponents}>
+                          {m.content}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   ))}
                 </div>
